@@ -2,23 +2,10 @@ export class ControllerOptions {
     public controller: string = '';
     public template: string = '';
     public templateUrl: string = '';
-
-    private _controllerAs: string = '';
+    public controllerAs: string = '$ctrl';
 
     constructor() {
         //
-    }
-
-    /**
-     * Return the controllerAs property set by the user. If one does not exist then use
-     * default value of $ctrl.
-     *
-     * @readonly
-     * @type {string}
-     * @memberof ControllerOptions
-     */
-    public get controllerAs(): string {
-        return this._controllerAs ? this.controllerAs : '$ctrl';
     }
 
     /**
@@ -28,12 +15,47 @@ export class ControllerOptions {
      * @type {boolean}
      * @memberof ControllerOptions
      */
-    public get isValidController(): boolean {
+    public get areControllerPropertiesSet(): boolean {
         if (this.controller && (this.template || this.templateUrl)) {
             return true;
         }
         return false;
     }
+
+    /**
+     * Check to see if either template property contains the file name
+     * in the text.
+     *
+     * @param {string} fileName The name of the file
+     * @returns {boolean}
+     * @memberof ControllerOptions
+     */
+    public doesTemplateFileNameMatchTemplateProperty(fileName: string): boolean {
+        if (this.template && this.template.includes(fileName)) {
+            return true;
+        }
+
+        if (this.templateUrl && this.templateUrl.includes(fileName)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Validate if the controller options are set and the template name mathces the file name
+     *
+     * @param {string} fileName
+     * @returns {boolean}
+     * @memberof ControllerOptions
+     */
+    public isValidController(fileName: string): boolean {
+        if (this.areControllerPropertiesSet && this.doesTemplateFileNameMatchTemplateProperty(fileName)) {
+            return true;
+        }
+        return false;
+    }
+
 
 
 }

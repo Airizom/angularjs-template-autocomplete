@@ -1,7 +1,9 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { FileParser } from './utilities/file-parser.utility';
+import { AngularJSTemplateAutocomplete } from './utilities/angularjs-template-autocomplete';
+import { Node } from 'typescript';
+import * as ts from 'typescript';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -10,42 +12,55 @@ export function activate(context: vscode.ExtensionContext) {
 	let provider1 = vscode.languages.registerCompletionItemProvider({ language: 'html', scheme: 'file' }, {
 
 		provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext) {
-			const fileParser = new FileParser();
-			// a simple completion item which inserts `Hello World!`
-			const simpleCompletion = new vscode.CompletionItem('Hello World!');
+			const autoComplete: AngularJSTemplateAutocomplete = new AngularJSTemplateAutocomplete(document);
 
-			// a completion item that inserts its text as snippet,
-			// the `insertText`-property is a `SnippetString` which we will
-			// honored by the editor.
-			const snippetCompletion = new vscode.CompletionItem('Good part of the day');
-			snippetCompletion.insertText = new vscode.SnippetString('Good ${1|morning,afternoon,evening|}. It is ${1}, right?');
-			snippetCompletion.documentation = new vscode.MarkdownString("Inserts a snippet that lets you select the _appropriate_ part of the day for your greeting.");
+			let controllerCompletionItem: vscode.CompletionItem | undefined;
+			let linePrefix = document.lineAt(position).text.substr(0, position.character);
+			let propertyCompletionItems: vscode.CompletionItem[] = [];
 
-			// a completion item that can be accepted by a commit character,
-			// the `commitCharacters`-property is set which means that the completion will
-			// be inserted and then the character will be typed.
-			const commitCharacterCompletion = new vscode.CompletionItem('console');
-			commitCharacterCompletion.commitCharacters = ['.'];
-			commitCharacterCompletion.documentation = new vscode.MarkdownString('Press `.` to get `console.`');
+			if (autoComplete.isAutocompleteAvailable) {
 
-			// a completion item that retriggers IntelliSense when being accepted,
-			// the `command`-property is set which the editor will execute after 
-			// completion has been inserted. Also, the `insertText` is set so that 
-			// a space is inserted after `new`
-			const commandCompletion = new vscode.CompletionItem('new');
-			commandCompletion.kind = vscode.CompletionItemKind.Keyword;
-			commandCompletion.insertText = 'new ';
-			commandCompletion.command = { command: 'editor.action.triggerSuggest', title: 'Re-trigger completions...' };
+				const line = linePrefix.endsWith(`${autoComplete.controllerOptions.controllerAs}.`);
+				if (line) {
+					const controllerNode = autoComplete.controllerNode as Node;
+					try {
+						controllerNode.forEachChild((node: Node) => {
+							if ((node as any).name && (node as any).name.escapedText) {
+								if (ts.isPropertyDeclaration(node)) {
+									const item = new vscode.CompletionItem((node as any).name.escapedText);
+									item.kind = vscode.CompletionItemKind.Property;
+									propertyCompletionItems.push(item);
+								}
+								if (ts.isMethodDeclaration(node)) {
+									const item = new vscode.CompletionItem((node as any).name.escapedText);
+									item.kind = vscode.CompletionItemKind.Method;
+									propertyCompletionItems.push(item);
+								}
+							}
+						});
+
+					} catch (error) {
+						console.log(error);
+					}
+				} else {
+					controllerCompletionItem = new vscode.CompletionItem(autoComplete.controllerOptions.controllerAs);
+				}
+			}
 
 			// return all completion items as array
-			return [
-				simpleCompletion,
-				snippetCompletion,
-				commitCharacterCompletion,
-				commandCompletion
-			];
+			const completionItems = [];
+
+			if (controllerCompletionItem) {
+				completionItems.push(controllerCompletionItem);
+			}
+
+			if (propertyCompletionItems.length) {
+				completionItems.push(...propertyCompletionItems);
+			}
+
+			return completionItems;
 		}
-	});
+	}, '.');
 
 	context.subscriptions.push(provider1);
 
