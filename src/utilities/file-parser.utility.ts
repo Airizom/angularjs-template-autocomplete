@@ -15,7 +15,7 @@ export class FileParser {
 
     private directoryFileNames: string[] = [];
 
-    private nodeParser: NodeParser = new NodeParser();
+    private nodeParser: NodeParser | undefined;
 
     constructor(private document: vscode.TextDocument) {
         this.activate();
@@ -38,10 +38,12 @@ export class FileParser {
                 const nodeChildren: Node[] = node.getChildren();
                 for (let j: number = 0; j < nodeChildren.length; j++) {
                     const node = nodeChildren[j];
-                    controllerOptions = this.nodeParser.getTemplateControllerOptions(node, templateFilePath);
-                    const templateName: string = path.basename(templateFilePath);
-                    if (controllerOptions && controllerOptions.isValidController(templateName)) {
-                        return controllerOptions;
+                    if (this.nodeParser) {
+                        controllerOptions = this.nodeParser.getTemplateControllerOptions(node, templateFilePath);
+                        const templateName: string = path.basename(templateFilePath);
+                        if (controllerOptions && controllerOptions.isValidController(templateName)) {
+                            return controllerOptions;
+                        }
                     }
                 }
             }
@@ -59,6 +61,7 @@ export class FileParser {
      */
     private getFirstChildrenFromFile(fileName: string, currentFileDirectory: string): ts.Node {
         this.currentSourceFile = ts.createSourceFile(`${os.tmpdir()}/${fileName}`, fs.readFileSync(`${currentFileDirectory}/${fileName}`, { encoding: 'utf-8' }), ts.ScriptTarget.Latest);
+        this.nodeParser = new NodeParser(this.currentSourceFile);
         const children = this.currentSourceFile.getChildren();
         const node = children[0];
         return node;

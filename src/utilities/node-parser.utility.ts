@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ControllerOptions } from '../models/controller-options.model';
 
 export class NodeParser {
-    constructor() {
+    constructor(public currentSourceFile: ts.SourceFile) {
         //
     }
 
@@ -38,13 +38,13 @@ export class NodeParser {
                 const controllerOptions: ControllerOptions = new ControllerOptions();
                 controllerOptions.controller = (controller as any).initializer.escapedText;
                 controllerOptions.controllerAs = controllerAs ? (controllerAs as any).initializer.text : '$ctrl';
-                controllerOptions.template = (templateUrl as any).initializer.text;
+                controllerOptions.template = (templateUrl as any).getFullText(this.currentSourceFile);
                 return controllerOptions;
             } else if (this.templateUrlPropertyHasTemplateName(templateUrl, templateName, controller)) {
                 const controllerOptions: ControllerOptions = new ControllerOptions();
                 controllerOptions.controller = (controller as any).initializer.escapedText;
                 controllerOptions.controllerAs = (controllerAs as any).initializer && (controllerAs as any).initializer.text ? (controllerAs as any).initializer.text : '$ctrl';
-                controllerOptions.templateUrl = (templateUrl as any).initializer.text;
+                controllerOptions.templateUrl = (templateUrl as any).getFullText(this.currentSourceFile);
                 return controllerOptions;
             }
         }
@@ -52,8 +52,9 @@ export class NodeParser {
     }
 
     private templateUrlPropertyHasTemplateName(templateUrl: ts.ClassElement | undefined, templateName: string, controller: ts.ClassElement | undefined): boolean {
-        if (templateUrl && (templateUrl as any).initializer && (templateUrl as any).initializer.text.includes(templateName)) {
-            if (controller && controller.name) {
+        if (templateUrl && (templateUrl as any).initializer) {
+            const templateUrlTextValue: string = (templateUrl as any).getFullText(this.currentSourceFile);
+            if (controller && controller.name && templateUrlTextValue.includes(templateName)) {
                 if ((controller as any).initializer.escapedText) {
                     return true;
                 }
@@ -63,8 +64,9 @@ export class NodeParser {
     }
 
     private templatePropertyHasTemplateName(template: ts.ClassElement | undefined, templateName: string, controller: ts.ClassElement | undefined): boolean {
-        if (template && (template as any).initializer && (template as any).initializer.text.includes(templateName)) {
-            if (controller && controller.name) {
+        if (template && (template as any).initializer) {
+            const templateTextValue: string = (template as any).getFullText(this.currentSourceFile);
+            if (controller && controller.name && templateTextValue.includes(templateName)) {
                 if ((controller as any).initializer.escapedText) {
                     return true;
                 }
