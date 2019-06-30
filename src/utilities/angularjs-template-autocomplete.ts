@@ -22,6 +22,38 @@ export class AngularJSTemplateAutocomplete {
         }
     }
 
+    public setCompletionItems(items: vscode.CompletionItem[]): void {
+        if (this.htmlValidator.isInsideInterpolation() && this.isAutocompleteAvailable) {
+            const interpolationText: string = this.htmlValidator.getInterpolationText();
+            const interpolationProperties: string[] = interpolationText.split('.');
+            if (interpolationProperties.length === 1) {
+                items.push(new vscode.CompletionItem(this.controllerOptions.controllerAs));
+            } else if (interpolationProperties.length === 2 && interpolationProperties[0] === this.controllerOptions.controllerAs) {
+                const controllerNode = this.controllerNode as ts.Node;
+                controllerNode.forEachChild((node: any) => {
+                    node.parent = controllerNode;
+                    if ((node as any).name && (node as any).name.escapedText) {
+                        if (ts.isPropertyDeclaration(node)) {
+                            const item = new vscode.CompletionItem((node as any).name.escapedText);
+                            item.kind = vscode.CompletionItemKind.Property;
+                            items.push(item);
+                        }
+                        if (ts.isMethodDeclaration(node)) {
+                            const item = new vscode.CompletionItem((node as any).name.escapedText);
+                            item.kind = vscode.CompletionItemKind.Method;
+                            items.push(item);
+                        }
+                    }
+                });
+
+            }
+
+
+
+        }
+
+    }
+
     /**
      * Determine if auto complete is availabe in the template file
      *

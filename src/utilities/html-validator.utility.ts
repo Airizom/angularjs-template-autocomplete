@@ -5,6 +5,8 @@ export class HtmlValidator {
     private lastLine: vscode.TextLine;
     private afterText: string;
 
+    private interpolationStartText: string = '';
+
     constructor(public document: vscode.TextDocument, public position: vscode.Position) {
         this.beforeText = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
         this.lastLine = document.lineAt(document.lineCount - 1);
@@ -47,6 +49,7 @@ export class HtmlValidator {
         for (var i = 0 - 1; i < this.afterText.length; i++) {
             const character: string = this.afterText.charAt(i);
             if (character === beforeTextCharacter) {
+                this.interpolationStartText = `=${beforeTextCharacter}`;
                 return true;
             }
         }
@@ -71,6 +74,7 @@ export class HtmlValidator {
                 if (i !== this.afterText.length) {
                     const previousCharacter: string = this.afterText.charAt(i + 1);
                     if (previousCharacter === '}') {
+                        this.interpolationStartText = '{{';
                         return true;
                     }
                     return false;
@@ -98,6 +102,19 @@ export class HtmlValidator {
 
     public isInsideInterpolation(): boolean {
         return this.isEnclosedInAttribute() || this.isEnclosedInDoubleBrackets();
+    }
+
+    public getInterpolationText(): string {
+        const lastIndexOfStringInterpolationStartText: number = this.beforeText.lastIndexOf(this.interpolationStartText);
+        const interpolationTextBeginning: string = this.beforeText.substring(lastIndexOfStringInterpolationStartText, this.beforeText.length);
+        if (interpolationTextBeginning) {
+            const interpolationValues: string[] = interpolationTextBeginning.substring(2).split(' ');
+            const lastValue: string | undefined = interpolationValues.pop();
+            if (lastValue) {
+                return lastValue;
+            }
+        }
+        return '';
     }
 
 }
