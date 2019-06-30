@@ -2,14 +2,16 @@ import { FileParser } from "./file-parser.utility";
 import * as vscode from 'vscode';
 import * as ts from 'typescript';
 import { ControllerOptions } from "../models/controller-options.model";
+import { HtmlValidator } from "./html-validator.utility";
 
 export class AngularJSTemplateAutocomplete {
     public controllerNode: ts.Node | undefined;
     public controllerOptions: ControllerOptions = new ControllerOptions();
 
     public fileParser: FileParser = new FileParser(this.document);
+    public htmlValidator: HtmlValidator = new HtmlValidator(this.document, this.position);
 
-    constructor(private document: vscode.TextDocument) {
+    constructor(private document: vscode.TextDocument, private position: vscode.Position) {
         this.activate();
     }
 

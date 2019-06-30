@@ -12,6 +12,7 @@ export class FileParser {
     public currentFileDirectory: string = path.dirname(this.document.fileName);
     public possibleControllerFileNames: string[] = [];
     public currentSourceFile: ts.SourceFile | undefined;
+    public currentSourceFilePath: string = '';
 
     private directoryFileNames: string[] = [];
 
@@ -60,7 +61,8 @@ export class FileParser {
      * @memberof FileParser
      */
     private getFirstChildrenFromFile(fileName: string, currentFileDirectory: string): ts.Node {
-        this.currentSourceFile = ts.createSourceFile(`${os.tmpdir()}/${fileName}`, fs.readFileSync(`${currentFileDirectory}/${fileName}`, { encoding: 'utf-8' }), ts.ScriptTarget.Latest);
+        this.currentSourceFilePath = `${currentFileDirectory}/${fileName}`;
+        this.currentSourceFile = ts.createSourceFile(`${os.tmpdir()}/${fileName}`, fs.readFileSync(this.currentSourceFilePath, { encoding: 'utf-8' }), ts.ScriptTarget.Latest);
         this.nodeParser = new NodeParser(this.currentSourceFile);
         const children = this.currentSourceFile.getChildren();
         const node = children[0];
@@ -72,10 +74,10 @@ export class FileParser {
         for (const fileName of this.possibleControllerFileNames) {
             const node = this.getFirstChildrenFromFile(fileName, currentFileDirectory);
             if (node) {
-                const nodeChildren: Node[] = node.getChildren();
-                for (const node of nodeChildren) {
-                    if (node.kind === ts.SyntaxKind.ClassDeclaration) {
-                        const classNode = (node as ts.ClassDeclaration);
+                const nodeChildren: Node[] = node.getChildren(this.currentSourceFile);
+                for (const child of nodeChildren) {
+                    if (child.kind === ts.SyntaxKind.ClassDeclaration) {
+                        const classNode = (child as ts.ClassDeclaration);
                         if (classNode.name && classNode.name.escapedText === controllerName) {
                             return classNode;
                         }

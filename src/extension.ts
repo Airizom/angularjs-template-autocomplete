@@ -12,53 +12,83 @@ export function activate(context: vscode.ExtensionContext) {
 	let provider1 = vscode.languages.registerCompletionItemProvider({ language: 'html', scheme: 'file' }, {
 
 		provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext) {
-			const autoComplete: AngularJSTemplateAutocomplete = new AngularJSTemplateAutocomplete(document);
+			const autoComplete: AngularJSTemplateAutocomplete = new AngularJSTemplateAutocomplete(document, position);
 
-			let controllerCompletionItem: vscode.CompletionItem | undefined;
-			let linePrefix = document.lineAt(position).text.substr(0, position.character);
-			let propertyCompletionItems: vscode.CompletionItem[] = [];
+			if (autoComplete.htmlValidator.isInsideInterpolation()) {
 
-			if (autoComplete.isAutocompleteAvailable) {
+				let controllerCompletionItem: vscode.CompletionItem | undefined;
+				let linePrefix = document.lineAt(position).text.substr(0, position.character);
+				let propertyCompletionItems: vscode.CompletionItem[] = [];
 
-				const line = linePrefix.endsWith(`${autoComplete.controllerOptions.controllerAs}.`);
-				if (line) {
+				if (autoComplete.isAutocompleteAvailable) {
+					controllerCompletionItem = new vscode.CompletionItem(autoComplete.controllerOptions.controllerAs);
+
 					const controllerNode = autoComplete.controllerNode as Node;
 					try {
-						controllerNode.forEachChild((node: Node) => {
+						const program = ts.createProgram([autoComplete.fileParser.currentSourceFilePath], {});
+						const checker = program.getTypeChecker();
+						controllerNode.forEachChild((node: any) => {
+							node.parent = controllerNode;
 							if ((node as any).name && (node as any).name.escapedText) {
 								if (ts.isPropertyDeclaration(node)) {
-									const item = new vscode.CompletionItem((node as any).name.escapedText);
-									item.kind = vscode.CompletionItemKind.Property;
-									propertyCompletionItems.push(item);
+									const line = linePrefix.endsWith(`${autoComplete.controllerOptions.controllerAs}.`);
+									if (line) {
+										const item = new vscode.CompletionItem((node as any).name.escapedText);
+										item.kind = vscode.CompletionItemKind.Property;
+										propertyCompletionItems.push(item);
+									}
 								}
 								if (ts.isMethodDeclaration(node)) {
-									const item = new vscode.CompletionItem((node as any).name.escapedText);
-									item.kind = vscode.CompletionItemKind.Method;
-									propertyCompletionItems.push(item);
+									const line = linePrefix.endsWith(`${autoComplete.controllerOptions.controllerAs}.`);
+									if (line) {
+										const item = new vscode.CompletionItem((node as any).name.escapedText);
+										item.kind = vscode.CompletionItemKind.Method;
+										propertyCompletionItems.push(item);
+									}
 								}
+								// if (ts.isPropertyDeclaration(node) || ts.isMethodDeclaration(node)) {
+								// 	if (node && (node as any).type) {
+								// 		(node as any).type.parent = controllerNode;
+								// 		if (ts.isTypeNode((node as any).type)) {
+								// 			try {
+								// 				const type: ts.Type = checker.getTypeFromTypeNode((node as any).type);
+								// 				const properties: ts.Symbol[] = type.getProperties();
+								// 				for (const property of properties) {
+								// 					const lineEnding = linePrefix.endsWith(`${autoComplete.controllerOptions.controllerAs}.${(node as any).name.escapedText}.`);
+								// 					if (lineEnding) {
+								// 						const item = new vscode.CompletionItem(property.escapedName.toString());
+								// 						item.kind = vscode.CompletionItemKind.Property;
+								// 						propertyCompletionItems.push(item);
+								// 					}
+								// 				}
+								// 			} catch (error) {
+								// 				// console.log(error);
+								// 			}
+								// 		}
+								// 	}
+								// }
 							}
 						});
 
 					} catch (error) {
 						console.log(error);
 					}
-				} else {
-					controllerCompletionItem = new vscode.CompletionItem(autoComplete.controllerOptions.controllerAs);
 				}
+
+				// return all completion items as array
+				const completionItems = [];
+
+				if (controllerCompletionItem) {
+					completionItems.push(controllerCompletionItem);
+				}
+
+				if (propertyCompletionItems.length) {
+					completionItems.push(...propertyCompletionItems);
+				}
+
+				return completionItems;
+
 			}
-
-			// return all completion items as array
-			const completionItems = [];
-
-			if (controllerCompletionItem) {
-				completionItems.push(controllerCompletionItem);
-			}
-
-			if (propertyCompletionItems.length) {
-				completionItems.push(...propertyCompletionItems);
-			}
-
-			return completionItems;
 		}
 	}, '.');
 
