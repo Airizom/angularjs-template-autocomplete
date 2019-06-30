@@ -13,15 +13,14 @@ export function activate(context: vscode.ExtensionContext) {
 
 		provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext) {
 			const autoComplete: AngularJSTemplateAutocomplete = new AngularJSTemplateAutocomplete(document, position);
+			let controllerCompletionItem: vscode.CompletionItem[] = [];
 
 			if (autoComplete.htmlValidator.isInsideInterpolation()) {
 
-				let controllerCompletionItem: vscode.CompletionItem | undefined;
 				let linePrefix = document.lineAt(position).text.substr(0, position.character);
-				let propertyCompletionItems: vscode.CompletionItem[] = [];
 
 				if (autoComplete.isAutocompleteAvailable) {
-					controllerCompletionItem = new vscode.CompletionItem(autoComplete.controllerOptions.controllerAs);
+					controllerCompletionItem.push(new vscode.CompletionItem(autoComplete.controllerOptions.controllerAs));
 
 					const controllerNode = autoComplete.controllerNode as Node;
 					try {
@@ -35,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
 									if (line) {
 										const item = new vscode.CompletionItem((node as any).name.escapedText);
 										item.kind = vscode.CompletionItemKind.Property;
-										propertyCompletionItems.push(item);
+										controllerCompletionItem.push(item);
 									}
 								}
 								if (ts.isMethodDeclaration(node)) {
@@ -43,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
 									if (line) {
 										const item = new vscode.CompletionItem((node as any).name.escapedText);
 										item.kind = vscode.CompletionItemKind.Method;
-										propertyCompletionItems.push(item);
+										controllerCompletionItem.push(item);
 									}
 								}
 								// if (ts.isPropertyDeclaration(node) || ts.isMethodDeclaration(node)) {
@@ -75,20 +74,10 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 
-				// return all completion items as array
-				const completionItems = [];
-
-				if (controllerCompletionItem) {
-					completionItems.push(controllerCompletionItem);
-				}
-
-				if (propertyCompletionItems.length) {
-					completionItems.push(...propertyCompletionItems);
-				}
-
-				return completionItems;
-
 			}
+
+			return controllerCompletionItem;
+
 		}
 	}, '.');
 
