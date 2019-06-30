@@ -22,14 +22,12 @@ export class NodeParser {
         return new ControllerOptions();
     }
 
-
-
     private setControllerProperties(members: ts.NodeArray<ts.ClassElement>, templateName: string): ControllerOptions {
         const controller: ts.ClassElement | undefined = this.getControllerPropertyFromClassElement(members);
 
-        const template: ts.ClassElement | undefined = this.getTemplatePropertyFromClassElement(members);
+        const template: ts.ClassElement | undefined = this.getTemplatePropertyFromClassElement(members, 'template');
 
-        const templateUrl: ts.ClassElement | undefined = this.getTemplateUrlPropertyFromClassElement(members);
+        const templateUrl: ts.ClassElement | undefined = this.getTemplatePropertyFromClassElement(members, 'templateUrl');
 
         const controllerAs: ts.ClassElement | undefined = this.getControllerAsPropertyFromClassElement(members);
 
@@ -40,7 +38,7 @@ export class NodeParser {
                 controllerOptions.controllerAs = controllerAs ? (controllerAs as any).initializer.text : '$ctrl';
                 controllerOptions.template = (templateUrl as any).getFullText(this.currentSourceFile);
                 return controllerOptions;
-            } else if (this.templateUrlPropertyHasTemplateName(templateUrl, templateName, controller)) {
+            } else if (this.templatePropertyHasTemplateName(templateUrl, templateName, controller)) {
                 const controllerOptions: ControllerOptions = new ControllerOptions();
                 controllerOptions.controller = (controller as any).initializer.escapedText;
                 controllerOptions.controllerAs = (controllerAs as any).initializer && (controllerAs as any).initializer.text ? (controllerAs as any).initializer.text : '$ctrl';
@@ -49,18 +47,6 @@ export class NodeParser {
             }
         }
         return new ControllerOptions();
-    }
-
-    private templateUrlPropertyHasTemplateName(templateUrl: ts.ClassElement | undefined, templateName: string, controller: ts.ClassElement | undefined): boolean {
-        if (templateUrl && (templateUrl as any).initializer) {
-            const templateUrlTextValue: string = (templateUrl as any).getFullText(this.currentSourceFile);
-            if (controller && controller.name && templateUrlTextValue.includes(templateName)) {
-                if ((controller as any).initializer.escapedText) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private templatePropertyHasTemplateName(template: ts.ClassElement | undefined, templateName: string, controller: ts.ClassElement | undefined): boolean {
@@ -82,18 +68,10 @@ export class NodeParser {
         return false;
     }
 
-    private getTemplateUrlPropertyFromClassElement(members: ts.NodeArray<ts.ClassElement>): ts.ClassElement | undefined {
+    private getTemplatePropertyFromClassElement(members: ts.NodeArray<ts.ClassElement>, escapedText: string): ts.ClassElement | undefined {
         return members.find((value: ts.ClassElement) => {
             if (value.name) {
-                return (value.name as any).escapedText === 'templateUrl';
-            }
-        });
-    }
-
-    private getTemplatePropertyFromClassElement(members: ts.NodeArray<ts.ClassElement>): ts.ClassElement | undefined {
-        return members.find((value: ts.ClassElement) => {
-            if (value.name) {
-                return (value.name as any).escapedText === 'template';
+                return (value.name as any).escapedText === escapedText;
             }
         });
     }
