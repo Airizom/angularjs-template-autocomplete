@@ -5,6 +5,7 @@ import * as ts from 'typescript';
 import { Node } from 'typescript';
 import { NodeParser } from './node-parser.utility';
 import { ControllerOptions } from '../models/controller-options.model';
+import * as os from 'os';
 
 export class FileParser {
 
@@ -23,6 +24,12 @@ export class FileParser {
         this.activate();
     }
 
+    /**
+     * Set up files to be used for the program
+     *
+     * @private
+     * @memberof FileParser
+     */
     private activate(): void {
         this.directoryFileNames = fs.readdirSync(this.currentFileDirectory);
         this.possibleControllerFileNames = this.directoryFileNames.filter((value: string) => {
@@ -114,5 +121,15 @@ export class FileParser {
         }
         return undefined;
     }
+
+    public serializeSymbol(symbol: ts.Symbol): string {
+        if (this.checker) {
+            return symbol.getName() + os.EOL +
+                ts.displayPartsToString(symbol.getDocumentationComment(this.checker)) + os.EOL +
+                this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!));
+        }
+        return '';
+    }
+
 
 }

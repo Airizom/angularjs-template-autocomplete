@@ -40,6 +40,7 @@ export class AngularJSTemplateAutocomplete {
                             if (ts.isMethodDeclaration(node)) {
                                 const item = new vscode.CompletionItem((node as any).name.escapedText);
                                 item.kind = vscode.CompletionItemKind.Method;
+                                item.documentation = this.getDocumentationFromNode(node);
                                 items.push(item);
                             }
                         }
@@ -70,6 +71,7 @@ export class AngularJSTemplateAutocomplete {
                                             const item = new vscode.CompletionItem(property.escapedName.toString());
                                             if (property.flags === ts.SymbolFlags.Method) {
                                                 item.kind = vscode.CompletionItemKind.Method;
+                                                item.documentation = this.fileParser.serializeSymbol(property);
                                             } else {
                                                 item.kind = vscode.CompletionItemKind.Property;
                                             }
@@ -85,11 +87,19 @@ export class AngularJSTemplateAutocomplete {
 
                 }
             }
-
-
-
         }
 
+    }
+
+    private getDocumentationFromNode(node: ts.MethodDeclaration): string {
+        let docs = '';
+        if (this.fileParser.checker) {
+            const symbol = this.fileParser.checker.getSymbolAtLocation(node.name);
+            if (symbol) {
+                docs = this.fileParser.serializeSymbol(symbol);
+            }
+        }
+        return docs;
     }
 
     /**
