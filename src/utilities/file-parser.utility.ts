@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as ts from 'typescript';
-import * as os from 'os';
 import { Node } from 'typescript';
 import { NodeParser } from './node-parser.utility';
 import { ControllerOptions } from '../models/controller-options.model';
@@ -13,6 +12,8 @@ export class FileParser {
     public possibleControllerFileNames: string[] = [];
     public currentSourceFile: ts.SourceFile | undefined;
     public currentSourceFilePath: string = '';
+    public program: ts.Program | undefined;
+    public checker: ts.TypeChecker | undefined;
 
     private directoryFileNames: string[] = [];
 
@@ -27,23 +28,49 @@ export class FileParser {
         this.possibleControllerFileNames = this.directoryFileNames.filter((value: string) => {
             return value.endsWith('.ts') || value.endsWith('.js');
         });
-
+        this.possibleControllerFileNames = this.possibleControllerFileNames.map((value: string) => {
+            return `${this.currentFileDirectory}/${value}`;
+        });
     }
 
-    public searchNodeChildrenFromFiles(files: string[], currentFileDirectory: string, templateFilePath: string): ControllerOptions | undefined {
+    private findNearestTsconfigFilePath(currentFileDirectory: string): string {
+        const files = fs.readdirSync(currentFileDirectory);
+        const tsConfigFile = files.filter((value: string) => {
+            return value.endsWith('tsconfig.json');
+        });
+        if (tsConfigFile.length) {
+            return `${currentFileDirectory}${path.sep}${tsConfigFile[0]}`;
+        }
+        const splitPaths: string[] = path.dirname(currentFileDirectory).split(path.sep);
+        currentFileDirectory = splitPaths.join(path.sep);
+        if (currentFileDirectory) {
+            return this.findNearestTsconfigFilePath(currentFileDirectory);
+        }
+        return '';
+    }
+
+    public searchNodeChildrenFromFilesForControllerOptions(templateFilePath: string): ControllerOptions | undefined {
+        const options: ts.CompilerOptions = {
+            project: this.findNearestTsconfigFilePath(this.currentFileDirectory)
+        };
+
+        this.program = ts.createProgram(this.possibleControllerFileNames, options);
+        this.checker = this.program.getTypeChecker();
+
         let controllerOptions: ControllerOptions | undefined;
-        for (let i: number = 0; i < files.length; i++) {
-            const fileName = files[i];
-            const node = this.getFirstChildrenFromFile(fileName, currentFileDirectory);
-            if (node) {
-                const nodeChildren: Node[] = node.getChildren();
-                for (let j: number = 0; j < nodeChildren.length; j++) {
-                    const node = nodeChildren[j];
-                    if (this.nodeParser) {
-                        controllerOptions = this.nodeParser.getTemplateControllerOptions(node, templateFilePath);
-                        const templateName: string = path.basename(templateFilePath);
-                        if (controllerOptions && controllerOptions.isValidController(templateName)) {
-                            return controllerOptions;
+        for (const sourceFile of this.program.getSourceFiles()) {
+            if (!sourceFile.isDeclarationFile) {
+                const node = this.getFirstChildrenFromFile(sourceFile);
+                if (node) {
+                    const nodeChildren: Node[] = node.getChildren();
+                    for (let j: number = 0; j < nodeChildren.length; j++) {
+                        const node = nodeChildren[j];
+                        if (this.nodeParser) {
+                            controllerOptions = this.nodeParser.getTemplateControllerOptions(node, templateFilePath);
+                            const templateName: string = path.basename(templateFilePath);
+                            if (controllerOptions && controllerOptions.isValidController(templateName)) {
+                                return controllerOptions;
+                            }
                         }
                     }
                 }
@@ -60,30 +87,30 @@ export class FileParser {
      * @returns
      * @memberof FileParser
      */
-    private getFirstChildrenFromFile(fileName: string, currentFileDirectory: string): ts.Node {
-        this.currentSourceFilePath = `${currentFileDirectory}/${fileName}`;
-        this.currentSourceFile = ts.createSourceFile(`${os.tmpdir()}/${fileName}`, fs.readFileSync(this.currentSourceFilePath, { encoding: 'utf-8' }), ts.ScriptTarget.Latest);
-        this.nodeParser = new NodeParser(this.currentSourceFile);
-        const children = this.currentSourceFile.getChildren();
+    private getFirstChildrenFromFile(sourceFile: ts.SourceFile): ts.Node {
+        this.nodeParser = new NodeParser(sourceFile);
+        const children = sourceFile.getChildren();
         const node = children[0];
         return node;
     }
 
     public getTemplateControllerNode(controllerName: string): ts.Node | undefined {
-        const currentFileDirectory: string = path.dirname(this.document.fileName);
-        for (const fileName of this.possibleControllerFileNames) {
-            const node = this.getFirstChildrenFromFile(fileName, currentFileDirectory);
-            if (node) {
-                const nodeChildren: Node[] = node.getChildren(this.currentSourceFile);
-                for (const child of nodeChildren) {
-                    if (child.kind === ts.SyntaxKind.ClassDeclaration) {
-                        const classNode = (child as ts.ClassDeclaration);
-                        if (classNode.name && classNode.name.escapedText === controllerName) {
-                            return classNode;
+        if (this.program) {
+            for (const sourceFile of this.program.getSourceFiles()) {
+                const node = this.getFirstChildrenFromFile(sourceFile);
+                if (node) {
+                    const nodeChildren: Node[] = node.getChildren(this.currentSourceFile);
+                    for (const child of nodeChildren) {
+                        if (child.kind === ts.SyntaxKind.ClassDeclaration) {
+                            const classNode = (child as ts.ClassDeclaration);
+                            if (classNode.name && classNode.name.escapedText === controllerName) {
+                                return classNode;
+                            }
                         }
                     }
                 }
             }
+
         }
         return undefined;
     }

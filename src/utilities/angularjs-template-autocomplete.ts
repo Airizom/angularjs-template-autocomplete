@@ -16,7 +16,7 @@ export class AngularJSTemplateAutocomplete {
     }
 
     private activate(): void {
-        this.controllerOptions = this.fileParser.searchNodeChildrenFromFiles(this.fileParser.possibleControllerFileNames, this.fileParser.currentFileDirectory, this.document.fileName) as ControllerOptions;
+        this.controllerOptions = this.fileParser.searchNodeChildrenFromFilesForControllerOptions(this.document.fileName) as ControllerOptions;
         if (this.controllerOptions) {
             this.controllerNode = this.fileParser.getTemplateControllerNode(this.controllerOptions.controller);
         }
@@ -29,23 +29,61 @@ export class AngularJSTemplateAutocomplete {
             if (interpolationProperties.length === 1) {
                 items.push(new vscode.CompletionItem(this.controllerOptions.controllerAs));
             } else if (interpolationProperties.length === 2 && interpolationProperties[0] === this.controllerOptions.controllerAs) {
-                const controllerNode = this.controllerNode as ts.Node;
-                controllerNode.forEachChild((node: any) => {
-                    node.parent = controllerNode;
-                    if ((node as any).name && (node as any).name.escapedText) {
-                        if (ts.isPropertyDeclaration(node)) {
-                            const item = new vscode.CompletionItem((node as any).name.escapedText);
-                            item.kind = vscode.CompletionItemKind.Property;
-                            items.push(item);
+                if (this.controllerNode) {
+                    this.controllerNode.forEachChild((node: ts.Node) => {
+                        if ((node as any).name && (node as any).name.escapedText) {
+                            if (ts.isPropertyDeclaration(node)) {
+                                const item = new vscode.CompletionItem((node as any).name.escapedText);
+                                item.kind = vscode.CompletionItemKind.Property;
+                                items.push(item);
+                            }
+                            if (ts.isMethodDeclaration(node)) {
+                                const item = new vscode.CompletionItem((node as any).name.escapedText);
+                                item.kind = vscode.CompletionItemKind.Method;
+                                items.push(item);
+                            }
                         }
-                        if (ts.isMethodDeclaration(node)) {
-                            const item = new vscode.CompletionItem((node as any).name.escapedText);
-                            item.kind = vscode.CompletionItemKind.Method;
-                            items.push(item);
+                    });
+                }
+            } else if (interpolationProperties.length === 3) {
+                if (interpolationProperties[0] !== this.controllerOptions.controllerAs) {
+                    return;
+                }
+                const controllerPropertyString = interpolationProperties[1];
+                let secondNode: ts.Identifier | undefined;
+                if (controllerPropertyString && this.controllerNode) {
+                    this.controllerNode.forEachChild((node: ts.Node) => {
+                        if ((node as any).name && (node as any).name.escapedText && controllerPropertyString === (node as any).name.escapedText) {
+                            secondNode = node as ts.Identifier;
+                        }
+                    });
+                }
+                if (secondNode) {
+                    if (ts.isPropertyDeclaration(secondNode) || ts.isMethodDeclaration(secondNode)) {
+                        if (secondNode && secondNode.type) {
+                            if (ts.isTypeNode(secondNode.type)) {
+                                try {
+                                    if (this.fileParser.checker) {
+                                        const type: ts.Type = this.fileParser.checker.getTypeFromTypeNode(secondNode.type);
+                                        const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(type);
+                                        for (const property of properties) {
+                                            const item = new vscode.CompletionItem(property.escapedName.toString());
+                                            if (property.flags === ts.SymbolFlags.Method) {
+                                                item.kind = vscode.CompletionItemKind.Method;
+                                            } else {
+                                                item.kind = vscode.CompletionItemKind.Property;
+                                            }
+                                            items.push(item);
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.log(error);
+                                }
+                            }
                         }
                     }
-                });
 
+                }
             }
 
 
