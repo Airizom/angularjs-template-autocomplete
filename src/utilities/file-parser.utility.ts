@@ -2,22 +2,74 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as ts from 'typescript';
-import { Node } from 'typescript';
 import { NodeParser } from './node-parser.utility';
 import { ControllerOptions } from '../models/controller-options.model';
 import * as os from 'os';
 
+/**
+ * File Parser
+ *
+ * @export
+ * @class FileParser
+ */
 export class FileParser {
 
+    /**
+     * File directory of the html template
+     *
+     * @type {string}
+     * @memberof FileParser
+     */
     public currentFileDirectory: string = path.dirname(this.document.fileName);
+
+    /**
+     * All possible files that could be used for controller
+     *
+     * @type {string[]}
+     * @memberof FileParser
+     */
     public possibleControllerFileNames: string[] = [];
+
+    /**
+     * Current file
+     *
+     * @type {(ts.SourceFile | undefined)}
+     * @memberof FileParser
+     */
     public currentSourceFile: ts.SourceFile | undefined;
-    public currentSourceFilePath: string = '';
+
+    /**
+     * Tyepscript program created so that we can parse all nodes for types
+     *
+     * @type {(ts.Program | undefined)}
+     * @memberof FileParser
+     */
     public program: ts.Program | undefined;
+
+    /**
+     * Checker used to check various types, properties and documentation
+     *
+     * @type {(ts.TypeChecker | undefined)}
+     * @memberof FileParser
+     */
     public checker: ts.TypeChecker | undefined;
 
+    /**
+     * Directoy files name that are present in the template directory
+     *
+     * @private
+     * @type {string[]}
+     * @memberof FileParser
+     */
     private directoryFileNames: string[] = [];
 
+    /**
+     * Parser used to traverse typescript nodes
+     *
+     * @private
+     * @type {(NodeParser | undefined)}
+     * @memberof FileParser
+     */
     private nodeParser: NodeParser | undefined;
 
     constructor(private document: vscode.TextDocument) {
@@ -40,9 +92,17 @@ export class FileParser {
         });
     }
 
+    /**
+     * Traverse the fie structure and find the project tsconfig if one exists.
+     *
+     * @private
+     * @param {string} currentFileDirectory
+     * @returns {string}
+     * @memberof FileParser
+     */
     private findNearestTsconfigFilePath(currentFileDirectory: string): string {
-        const files = fs.readdirSync(currentFileDirectory);
-        const tsConfigFile = files.filter((value: string) => {
+        const files: string[] = fs.readdirSync(currentFileDirectory);
+        const tsConfigFile: string[] = files.filter((value: string) => {
             return value.endsWith('tsconfig.json');
         });
         if (tsConfigFile.length) {
@@ -56,6 +116,13 @@ export class FileParser {
         return '';
     }
 
+    /**
+     * Search all nodes in the typescript tree for the controller options that match the html template name.
+     *
+     * @param {string} templateFilePath
+     * @returns {(ControllerOptions | undefined)}
+     * @memberof FileParser
+     */
     public searchNodeChildrenFromFilesForControllerOptions(templateFilePath: string): ControllerOptions | undefined {
         const options: ts.CompilerOptions = {
             project: this.findNearestTsconfigFilePath(this.currentFileDirectory)
@@ -67,13 +134,12 @@ export class FileParser {
         let controllerOptions: ControllerOptions | undefined;
         for (const sourceFile of this.program.getSourceFiles()) {
             if (!sourceFile.isDeclarationFile) {
-                const node = this.getFirstChildrenFromFile(sourceFile);
+                const node: ts.Node = this.getFirstChildrenFromFile(sourceFile);
                 if (node) {
-                    const nodeChildren: Node[] = node.getChildren();
-                    for (let j: number = 0; j < nodeChildren.length; j++) {
-                        const node = nodeChildren[j];
+                    const nodeChildren: ts.Node[] = node.getChildren();
+                    for (const child of nodeChildren) {
                         if (this.nodeParser) {
-                            controllerOptions = this.nodeParser.getTemplateControllerOptions(node, templateFilePath);
+                            controllerOptions = this.nodeParser.getTemplateControllerOptions(child, templateFilePath);
                             const templateName: string = path.basename(templateFilePath);
                             if (controllerOptions && controllerOptions.isValidController(templateName)) {
                                 return controllerOptions;
@@ -96,20 +162,27 @@ export class FileParser {
      */
     private getFirstChildrenFromFile(sourceFile: ts.SourceFile): ts.Node {
         this.nodeParser = new NodeParser(sourceFile);
-        const children = sourceFile.getChildren();
-        const node = children[0];
+        const children: ts.Node[] = sourceFile.getChildren();
+        const node: ts.Node = children[0];
         return node;
     }
 
+    /**
+     * Get the template controller node that matches that name found on the controller options.
+     *
+     * @param {string} controllerName
+     * @returns {(ts.Node | undefined)}
+     * @memberof FileParser
+     */
     public getTemplateControllerNode(controllerName: string): ts.Node | undefined {
         if (this.program) {
             for (const sourceFile of this.program.getSourceFiles()) {
-                const node = this.getFirstChildrenFromFile(sourceFile);
+                const node: ts.Node = this.getFirstChildrenFromFile(sourceFile);
                 if (node) {
-                    const nodeChildren: Node[] = node.getChildren(this.currentSourceFile);
+                    const nodeChildren: ts.Node[] = node.getChildren(sourceFile);
                     for (const child of nodeChildren) {
                         if (child.kind === ts.SyntaxKind.ClassDeclaration) {
-                            const classNode = (child as ts.ClassDeclaration);
+                            const classNode: ts.ClassDeclaration = (child as ts.ClassDeclaration);
                             if (classNode.name && classNode.name.escapedText === controllerName) {
                                 return classNode;
                             }
@@ -122,6 +195,13 @@ export class FileParser {
         return undefined;
     }
 
+    /**
+     * Serialize a symbol to be used as documenation string.
+     *
+     * @param {ts.Symbol} symbol
+     * @returns {string}
+     * @memberof FileParser
+     */
     public serializeSymbol(symbol: ts.Symbol): string {
         if (this.checker) {
             return symbol.getName() + os.EOL +

@@ -1,10 +1,47 @@
 import * as vscode from 'vscode';
 
+/**
+ * Html validation of html template
+ *
+ * @export
+ * @class HtmlValidator
+ */
 export class HtmlValidator {
+
+    /**
+     * Text in the html template that occurs before the users cursor
+     *
+     * @private
+     * @type {string}
+     * @memberof HtmlValidator
+     */
     private beforeText: string;
-    private lastLine: vscode.TextLine;
+
+    /**
+     * Text in the html template that occurs after the users cursor
+     *
+     * @private
+     * @type {string}
+     * @memberof HtmlValidator
+     */
     private afterText: string;
 
+    /**
+     * Last line of the html template
+     *
+     * @private
+     * @type {vscode.TextLine}
+     * @memberof HtmlValidator
+     */
+    private lastLine: vscode.TextLine;
+
+    /**
+     * The text that occurs at the beginning of a interpolation. Such a {{, =', or =""
+     *
+     * @private
+     * @type {string}
+     * @memberof HtmlValidator
+     */
     private interpolationStartText: string = '';
 
     constructor(public document: vscode.TextDocument, public position: vscode.Position) {
@@ -13,9 +50,17 @@ export class HtmlValidator {
         this.afterText = document.getText(new vscode.Range(position, new vscode.Position(this.lastLine.lineNumber, this.lastLine.range.end.character)));
     }
 
+    /**
+     * Get the character that is used after an equals sign.
+     *
+     * @private
+     * @param {(`"` | `'`)} characterToVerify
+     * @returns {string}
+     * @memberof HtmlValidator
+     */
     private getBeforeQuoteCharacter(characterToVerify: `"` | `'`): string {
         if (this.beforeText) {
-            for (var i = this.beforeText.length - 1; i >= 0; i--) {
+            for (let i: number = this.beforeText.length - 1; i >= 0; i--) {
                 const character: string = this.beforeText.charAt(i);
                 if (character === characterToVerify) {
                     if (i !== 0) {
@@ -31,7 +76,14 @@ export class HtmlValidator {
         return '';
     }
 
-    private isEnclosedInAttribute() {
+    /**
+     * Determine if user cursor is inside an html attribute.
+     *
+     * @private
+     * @returns
+     * @memberof HtmlValidator
+     */
+    private isEnclosedInAttribute(): boolean {
         const beforeTextDoubleQuoteCharacter: string = this.getBeforeQuoteCharacter(`"`);
         const beforeTextSingleQuoteCharacter: string = this.getBeforeQuoteCharacter(`'`);
 
@@ -45,8 +97,16 @@ export class HtmlValidator {
         return false;
     }
 
+    /**
+     * Determine if a character exists if text.
+     *
+     * @private
+     * @param {string} beforeTextCharacter
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
     private hasCharacterInAfterText(beforeTextCharacter: string): boolean {
-        for (var i = 0 - 1; i < this.afterText.length; i++) {
+        for (let i: number = 0 - 1; i < this.afterText.length; i++) {
             const character: string = this.afterText.charAt(i);
             if (character === beforeTextCharacter) {
                 this.interpolationStartText = `=${beforeTextCharacter}`;
@@ -56,9 +116,16 @@ export class HtmlValidator {
         return false;
     }
 
+    /**
+     * Determine if the text before and after user cursor is enclosed in double brackets.
+     *
+     * @private
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
     private isEnclosedInDoubleBrackets(): boolean {
         if (this.beforeText) {
-            let hasDoubleBracketInBeforeText: boolean = this.hasDoubleBracketInBeforeText();
+            const hasDoubleBracketInBeforeText: boolean = this.hasDoubleBracketInBeforeText();
             if (hasDoubleBracketInBeforeText) {
                 return this.hasDoubleBracketInAfterText();
             }
@@ -67,8 +134,15 @@ export class HtmlValidator {
         return false;
     }
 
+    /**
+     * Determine if a double bracket occurs in the text.
+     *
+     * @private
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
     private hasDoubleBracketInAfterText(): boolean {
-        for (var i = 0 - 1; i < this.afterText.length; i++) {
+        for (let i: number = 0 - 1; i < this.afterText.length; i++) {
             const character: string = this.afterText.charAt(i);
             if (character === '}') {
                 if (i !== this.afterText.length) {
@@ -84,8 +158,15 @@ export class HtmlValidator {
         return false;
     }
 
+    /**
+     * Determine a double brackets occurs in the text
+     *
+     * @private
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
     private hasDoubleBracketInBeforeText(): boolean {
-        for (var i = this.beforeText.length - 1; i >= 0; i--) {
+        for (let i: number = this.beforeText.length - 1; i >= 0; i--) {
             const character: string = this.beforeText.charAt(i);
             if (character === '{') {
                 if (i !== 0) {
@@ -100,10 +181,22 @@ export class HtmlValidator {
         return false;
     }
 
+    /**
+     * Determine if user is typing inside of a AngularJS interpolation string
+     *
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
     public isInsideInterpolation(): boolean {
         return this.isEnclosedInAttribute() || this.isEnclosedInDoubleBrackets();
     }
 
+    /**
+     * Parse interpolation string so that we only get the statement that the user is typing.
+     *
+     * @returns {string}
+     * @memberof HtmlValidator
+     */
     public getInterpolationText(): string {
         const lastIndexOfStringInterpolationStartText: number = this.beforeText.lastIndexOf(this.interpolationStartText);
         const interpolationTextBeginning: string = this.beforeText.substring(lastIndexOfStringInterpolationStartText, this.beforeText.length);

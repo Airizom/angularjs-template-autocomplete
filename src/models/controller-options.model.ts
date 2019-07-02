@@ -1,7 +1,37 @@
+/**
+ * Controller options used for controller node
+ *
+ * @export
+ * @class ControllerOptions
+ */
 export class ControllerOptions {
+    /**
+     * Controller name
+     *
+     * @type {string}
+     * @memberof ControllerOptions
+     */
     public controller: string = '';
+    /**
+     * Template
+     *
+     * @type {string}
+     * @memberof ControllerOptions
+     */
     public template: string = '';
+    /**
+     * Template Url
+     *
+     * @type {string}
+     * @memberof ControllerOptions
+     */
     public templateUrl: string = '';
+    /**
+     * ControllerAs property
+     *
+     * @type {string}
+     * @memberof ControllerOptions
+     */
     public controllerAs: string = '$ctrl';
 
     constructor() {
