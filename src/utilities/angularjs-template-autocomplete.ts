@@ -81,24 +81,8 @@ export class AngularJSTemplateAutocomplete {
             if (interpolationProperties.length === 1) {
                 items.push(new vscode.CompletionItem(this.controllerOptions.controllerAs));
             } else if (interpolationProperties.length === 2 && interpolationProperties[0] === this.controllerOptions.controllerAs) {
-                if (this.controllerNode) {
-                    this.controllerNode.forEachChild((node: ts.Node) => {
-                        if ((node as any).name && (node as any).name.escapedText) {
-                            if (ts.isPropertyDeclaration(node)) {
-                                const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
-                                item.kind = vscode.CompletionItemKind.Property;
-                                items.push(item);
-                            }
-                            if (ts.isMethodDeclaration(node)) {
-                                const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
-                                item.kind = vscode.CompletionItemKind.Method;
-                                item.documentation = this.getDocumentationFromNode(node);
-                                items.push(item);
-                            }
-                        }
-                    });
-                }
-            } else if (interpolationProperties.length === 3) {
+                this.setSecondLevelProperties(items);
+            } else if (interpolationProperties.length >= 3) {
                 if (interpolationProperties[0] !== this.controllerOptions.controllerAs) {
                     return;
                 }
@@ -115,34 +99,14 @@ export class AngularJSTemplateAutocomplete {
                     });
                 }
                 if (secondNode) {
-                    interpolationProperties = interpolationProperties.reverse();
-                    interpolationProperties.pop();
-                    interpolationProperties.pop();
+                    interpolationProperties = this.createPropertiesArray(interpolationProperties);
                     if (ts.isPropertyDeclaration(secondNode) || ts.isMethodDeclaration(secondNode)) {
                         if (secondNode && secondNode.type) {
                             if (ts.isTypeNode(secondNode.type)) {
-                                for (let i: number = 0; i < interpolationProperties.length; i++) {
-                                    const value: string = interpolationProperties[i];
-                                    if (i === interpolationProperties.length - 1) {
-                                        try {
-                                            if (this.fileParser.checker) {
-                                                const type: ts.Type = this.fileParser.checker.getTypeFromTypeNode(secondNode.type);
-                                                const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(type);
-                                                for (const property of properties) {
-                                                    const item: vscode.CompletionItem = new vscode.CompletionItem(property.escapedName.toString());
-                                                    if (property.flags === ts.SymbolFlags.Method) {
-                                                        item.kind = vscode.CompletionItemKind.Method;
-                                                        item.documentation = this.fileParser.serializeSymbol(property);
-                                                    } else {
-                                                        item.kind = vscode.CompletionItemKind.Property;
-                                                    }
-                                                    items.push(item);
-                                                }
-                                            }
-                                        } catch (error) {
-                                            console.log(error);
-                                        }
-                                    }
+                                try {
+                                    this.setCompletionPropertiesOfLastNode(interpolationProperties, secondNode.type, items);
+                                } catch (error) {
+                                    console.log(error);
                                 }
                             }
                         }
@@ -151,7 +115,89 @@ export class AngularJSTemplateAutocomplete {
                 }
             }
         }
+    }
 
+    /**
+     * Reverse the interpolation properties and then remove the uneeded controller and second level property.
+     *
+     * @private
+     * @param {string[]} interpolationProperties
+     * @returns {string[]}
+     * @memberof AngularJSTemplateAutocomplete
+     */
+    private createPropertiesArray(interpolationProperties: string[]): string[] {
+        interpolationProperties = interpolationProperties.reverse();
+        interpolationProperties.pop();
+        interpolationProperties.pop();
+        return interpolationProperties;
+    }
+
+    /**
+     * Recursively traverse the interpolation properties to get the last property types for completion
+     *
+     * @private
+     * @param {string[]} interpolationProperties
+     * @param {ts.TypeNode} typeNode
+     * @param {vscode.CompletionItem[]} items
+     * @memberof AngularJSTemplateAutocomplete
+     */
+    private setCompletionPropertiesOfLastNode(interpolationProperties: string[], typeNode: ts.TypeNode, items: vscode.CompletionItem[]): void {
+        const lastProperty: string | undefined = this.htmlValidator.stripParenthesisFromProperty(interpolationProperties.pop() as string);
+        if (!lastProperty) {
+            if (this.fileParser.checker) {
+                const type: ts.Type = this.fileParser.checker.getTypeFromTypeNode(typeNode);
+                const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(type);
+                for (const property of properties) {
+                    const item: vscode.CompletionItem = new vscode.CompletionItem(property.escapedName.toString());
+                    if (property.flags === ts.SymbolFlags.Method) {
+                        item.kind = vscode.CompletionItemKind.Method;
+                        item.documentation = this.fileParser.serializeSymbol(property);
+                    } else {
+                        item.kind = vscode.CompletionItemKind.Property;
+                    }
+                    items.push(item);
+                }
+            }
+        } else {
+            if (this.fileParser.checker) {
+                const type: ts.Type = this.fileParser.checker.getTypeFromTypeNode(typeNode);
+                const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(type);
+                let propertyToFind: ts.Symbol | undefined;
+                for (const property of properties) {
+                    if (property.escapedName.toString() === lastProperty) {
+                        propertyToFind = property;
+                        this.setCompletionPropertiesOfLastNode(interpolationProperties, (propertyToFind.valueDeclaration as any).type, items);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Set the second completions properties
+     *
+     * @private
+     * @param {vscode.CompletionItem[]} items
+     * @memberof AngularJSTemplateAutocomplete
+     */
+    private setSecondLevelProperties(items: vscode.CompletionItem[]): void {
+        if (this.controllerNode) {
+            this.controllerNode.forEachChild((node: ts.Node) => {
+                if ((node as any).name && (node as any).name.escapedText) {
+                    if (ts.isPropertyDeclaration(node)) {
+                        const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
+                        item.kind = vscode.CompletionItemKind.Property;
+                        items.push(item);
+                    }
+                    if (ts.isMethodDeclaration(node)) {
+                        const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
+                        item.kind = vscode.CompletionItemKind.Method;
+                        item.documentation = this.getDocumentationFromNode(node);
+                        items.push(item);
+                    }
+                }
+            });
+        }
     }
 
     /**
