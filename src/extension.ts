@@ -15,7 +15,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const provider: vscode.Disposable = vscode.languages.registerCompletionItemProvider({ language: 'html', scheme: 'file' }, {
 
-        provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] {
+        provideCompletionItems(
+            document: vscode.TextDocument,
+            position: vscode.Position, token: vscode.CancellationToken,
+            context: vscode.CompletionContext
+        ): vscode.CompletionItem[] {
             const autoComplete: AngularJSTemplateAutocomplete = new AngularJSTemplateAutocomplete(document, position);
             const controllerCompletionItems: vscode.CompletionItem[] = [];
 

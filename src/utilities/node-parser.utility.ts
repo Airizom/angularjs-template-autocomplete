@@ -104,7 +104,11 @@ export class NodeParser {
      * @returns {boolean}
      * @memberof NodeParser
      */
-    private hasControllerAndTemplateProperties(controller: ts.ClassElement | undefined, template: ts.ClassElement | undefined, templateUrl: ts.ClassElement | undefined): boolean {
+    private hasControllerAndTemplateProperties(
+        controller: ts.ClassElement | undefined,
+        template: ts.ClassElement | undefined,
+        templateUrl: ts.ClassElement | undefined
+    ): boolean {
         if (controller && (template || templateUrl)) {
             return true;
         }

@@ -15,7 +15,7 @@ export class HtmlValidator {
      * @type {string}
      * @memberof HtmlValidator
      */
-    private beforeText: string;
+    private readonly beforeText: string;
 
     /**
      * Text in the html template that occurs after the users cursor
@@ -24,7 +24,7 @@ export class HtmlValidator {
      * @type {string}
      * @memberof HtmlValidator
      */
-    private afterText: string;
+    private readonly afterText: string;
 
     /**
      * Last line of the html template
@@ -33,7 +33,7 @@ export class HtmlValidator {
      * @type {vscode.TextLine}
      * @memberof HtmlValidator
      */
-    private lastLine: vscode.TextLine;
+    private readonly lastLine: vscode.TextLine;
 
     /**
      * The text that occurs at the beginning of a interpolation. Such a {{, =', or =""
@@ -51,6 +51,49 @@ export class HtmlValidator {
     }
 
     /**
+     * Determine if user is typing inside of a AngularJS interpolation string
+     *
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
+    public isInsideInterpolation(): boolean {
+        return this.isEnclosedInAttribute() || this.isEnclosedInDoubleBrackets();
+    }
+
+    /**
+     * Parse interpolation string so that we only get the statement that the user is typing.
+     *
+     * @returns {string}
+     * @memberof HtmlValidator
+     */
+    public getInterpolationText(): string {
+        const lastIndexOfStringInterpolationStartText: number = this.beforeText.lastIndexOf(this.interpolationStartText);
+        const interpolationTextBeginning: string = this.beforeText.substring(lastIndexOfStringInterpolationStartText, this.beforeText.length);
+        if (interpolationTextBeginning) {
+            const interpolationValues: string[] = interpolationTextBeginning.substring(2).split(' ');
+            const lastValue: string | undefined = interpolationValues.pop();
+            if (lastValue) {
+                return lastValue;
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Remove the parenthesis and everything inside it from a method.
+     *
+     * @param {string} property
+     * @returns {string}
+     * @memberof HtmlValidator
+     */
+    public stripParenthesisFromProperty(property: string): string {
+        if (property) {
+            return property.replace(/\(.*\)/g, '');
+        }
+        return '';
+    }
+
+    /**
      * Get the character that is used after an equals sign.
      *
      * @private
@@ -58,14 +101,14 @@ export class HtmlValidator {
      * @returns {string}
      * @memberof HtmlValidator
      */
-    private getBeforeQuoteCharacter(characterToVerify: `"` | `'`): string {
+    private getBeforeQuoteCharacter(characterToVerify: '"' | "'"): string {
         if (this.beforeText) {
             for (let i: number = this.beforeText.length - 1; i >= 0; i--) {
                 const character: string = this.beforeText.charAt(i);
                 if (character === characterToVerify) {
                     if (i !== 0) {
                         const previousCharacter: string = this.beforeText.charAt(i - 1);
-                        if (previousCharacter === `=`) {
+                        if (previousCharacter === '=') {
                             return character;
                         }
                         return '';
@@ -84,8 +127,8 @@ export class HtmlValidator {
      * @memberof HtmlValidator
      */
     private isEnclosedInAttribute(): boolean {
-        const beforeTextDoubleQuoteCharacter: string = this.getBeforeQuoteCharacter(`"`);
-        const beforeTextSingleQuoteCharacter: string = this.getBeforeQuoteCharacter(`'`);
+        const beforeTextDoubleQuoteCharacter: string = this.getBeforeQuoteCharacter('"');
+        const beforeTextSingleQuoteCharacter: string = this.getBeforeQuoteCharacter("'");
 
         if (beforeTextDoubleQuoteCharacter) {
             return this.hasCharacterInAfterText(beforeTextDoubleQuoteCharacter);
@@ -179,49 +222,6 @@ export class HtmlValidator {
             }
         }
         return false;
-    }
-
-    /**
-     * Determine if user is typing inside of a AngularJS interpolation string
-     *
-     * @returns {boolean}
-     * @memberof HtmlValidator
-     */
-    public isInsideInterpolation(): boolean {
-        return this.isEnclosedInAttribute() || this.isEnclosedInDoubleBrackets();
-    }
-
-    /**
-     * Parse interpolation string so that we only get the statement that the user is typing.
-     *
-     * @returns {string}
-     * @memberof HtmlValidator
-     */
-    public getInterpolationText(): string {
-        const lastIndexOfStringInterpolationStartText: number = this.beforeText.lastIndexOf(this.interpolationStartText);
-        const interpolationTextBeginning: string = this.beforeText.substring(lastIndexOfStringInterpolationStartText, this.beforeText.length);
-        if (interpolationTextBeginning) {
-            const interpolationValues: string[] = interpolationTextBeginning.substring(2).split(' ');
-            const lastValue: string | undefined = interpolationValues.pop();
-            if (lastValue) {
-                return lastValue;
-            }
-        }
-        return '';
-    }
-
-    /**
-     * Remove the parenthesis and everything inside it from a method.
-     *
-     * @param {string} property
-     * @returns {string}
-     * @memberof HtmlValidator
-     */
-    public stripParenthesisFromProperty(property: string): string {
-        if (property) {
-            return property.replace(/\(.*\)/g, '');
-        }
-        return '';
     }
 
 }

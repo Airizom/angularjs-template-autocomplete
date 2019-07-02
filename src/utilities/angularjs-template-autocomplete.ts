@@ -12,6 +12,17 @@ import { HtmlValidator } from './html-validator.utility';
  */
 export class AngularJSTemplateAutocomplete {
 
+    /**
+     * Determine if auto complete is availabe in the template file
+     *
+     * @readonly
+     * @type {boolean}
+     * @memberof AngularJSTemplateAutocomplete
+     */
+    public get isAutocompleteAvailable(): boolean {
+        return this.controllerNode ? true : false;
+    }
+
 
     /**
      * Controller node that is tied to the html template
@@ -38,7 +49,7 @@ export class AngularJSTemplateAutocomplete {
      * @type {FileParser}
      * @memberof AngularJSTemplateAutocomplete
      */
-    private fileParser: FileParser = new FileParser(this.document);
+    private readonly fileParser: FileParser = new FileParser(this.document);
 
     /**
      * Used to validate various things in the html template
@@ -47,24 +58,10 @@ export class AngularJSTemplateAutocomplete {
      * @type {HtmlValidator}
      * @memberof AngularJSTemplateAutocomplete
      */
-    private htmlValidator: HtmlValidator = new HtmlValidator(this.document, this.position);
+    private readonly htmlValidator: HtmlValidator = new HtmlValidator(this.document, this.position);
 
-    constructor(private document: vscode.TextDocument, private position: vscode.Position) {
+    constructor(private readonly document: vscode.TextDocument, private readonly position: vscode.Position) {
         this.activate();
-    }
-
-    /**
-     * Activate the class by creatingn controller options by using the html template name.
-     * Then using those options to get the node of the controller.
-     *
-     * @private
-     * @memberof AngularJSTemplateAutocomplete
-     */
-    private activate(): void {
-        this.controllerOptions = this.fileParser.searchNodeChildrenFromFilesForControllerOptions(this.document.fileName) as ControllerOptions;
-        if (this.controllerOptions) {
-            this.controllerNode = this.fileParser.getTemplateControllerNode(this.controllerOptions.controller);
-        }
     }
 
     /**
@@ -114,6 +111,20 @@ export class AngularJSTemplateAutocomplete {
 
                 }
             }
+        }
+    }
+
+    /**
+     * Activate the class by creatingn controller options by using the html template name.
+     * Then using those options to get the node of the controller.
+     *
+     * @private
+     * @memberof AngularJSTemplateAutocomplete
+     */
+    private activate(): void {
+        this.controllerOptions = this.fileParser.searchNodeChildrenFromFilesForControllerOptions(this.document.fileName) as ControllerOptions;
+        if (this.controllerOptions) {
+            this.controllerNode = this.fileParser.getTemplateControllerNode(this.controllerOptions.controller);
         }
     }
 
@@ -218,18 +229,6 @@ export class AngularJSTemplateAutocomplete {
         }
         return docs;
     }
-
-    /**
-     * Determine if auto complete is availabe in the template file
-     *
-     * @readonly
-     * @type {boolean}
-     * @memberof AngularJSTemplateAutocomplete
-     */
-    public get isAutocompleteAvailable(): boolean {
-        return this.controllerNode ? true : false;
-    }
-
 
 
 }

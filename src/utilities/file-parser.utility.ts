@@ -72,48 +72,8 @@ export class FileParser {
      */
     private nodeParser: NodeParser | undefined;
 
-    constructor(private document: vscode.TextDocument) {
+    constructor(private readonly document: vscode.TextDocument) {
         this.activate();
-    }
-
-    /**
-     * Set up files to be used for the program
-     *
-     * @private
-     * @memberof FileParser
-     */
-    private activate(): void {
-        this.directoryFileNames = fs.readdirSync(this.currentFileDirectory);
-        this.possibleControllerFileNames = this.directoryFileNames.filter((value: string) => {
-            return value.endsWith('.ts') || value.endsWith('.js');
-        });
-        this.possibleControllerFileNames = this.possibleControllerFileNames.map((value: string) => {
-            return `${this.currentFileDirectory}/${value}`;
-        });
-    }
-
-    /**
-     * Traverse the fie structure and find the project tsconfig if one exists.
-     *
-     * @private
-     * @param {string} currentFileDirectory
-     * @returns {string}
-     * @memberof FileParser
-     */
-    private findNearestTsconfigFilePath(currentFileDirectory: string): string {
-        const files: string[] = fs.readdirSync(currentFileDirectory);
-        const tsConfigFile: string[] = files.filter((value: string) => {
-            return value.endsWith('tsconfig.json');
-        });
-        if (tsConfigFile.length) {
-            return `${currentFileDirectory}${path.sep}${tsConfigFile[0]}`;
-        }
-        const splitPaths: string[] = path.dirname(currentFileDirectory).split(path.sep);
-        currentFileDirectory = splitPaths.join(path.sep);
-        if (currentFileDirectory) {
-            return this.findNearestTsconfigFilePath(currentFileDirectory);
-        }
-        return '';
     }
 
     /**
@@ -149,22 +109,6 @@ export class FileParser {
                 }
             }
         }
-    }
-
-    /**
-     * Get the root level node from source file
-     *
-     * @private
-     * @param {string} fileName
-     * @param {string} currentFileDirectory
-     * @returns
-     * @memberof FileParser
-     */
-    private getFirstChildrenFromFile(sourceFile: ts.SourceFile): ts.Node {
-        this.nodeParser = new NodeParser(sourceFile);
-        const children: ts.Node[] = sourceFile.getChildren();
-        const node: ts.Node = children[0];
-        return node;
     }
 
     /**
@@ -209,6 +153,62 @@ export class FileParser {
                 this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!));
         }
         return '';
+    }
+
+    /**
+     * Set up files to be used for the program
+     *
+     * @private
+     * @memberof FileParser
+     */
+    private activate(): void {
+        this.directoryFileNames = fs.readdirSync(this.currentFileDirectory);
+        this.possibleControllerFileNames = this.directoryFileNames.filter((value: string) => {
+            return value.endsWith('.ts') || value.endsWith('.js');
+        });
+        this.possibleControllerFileNames = this.possibleControllerFileNames.map((value: string) => {
+            return `${this.currentFileDirectory}/${value}`;
+        });
+    }
+
+    /**
+     * Traverse the fie structure and find the project tsconfig if one exists.
+     *
+     * @private
+     * @param {string} currentFileDirectory
+     * @returns {string}
+     * @memberof FileParser
+     */
+    private findNearestTsconfigFilePath(currentFileDirectory: string): string {
+        const files: string[] = fs.readdirSync(currentFileDirectory);
+        const tsConfigFile: string[] = files.filter((value: string) => {
+            return value.endsWith('tsconfig.json');
+        });
+        if (tsConfigFile.length) {
+            return `${currentFileDirectory}${path.sep}${tsConfigFile[0]}`;
+        }
+        const splitPaths: string[] = path.dirname(currentFileDirectory).split(path.sep);
+        currentFileDirectory = splitPaths.join(path.sep);
+        if (currentFileDirectory) {
+            return this.findNearestTsconfigFilePath(currentFileDirectory);
+        }
+        return '';
+    }
+
+    /**
+     * Get the root level node from source file
+     *
+     * @private
+     * @param {string} fileName
+     * @param {string} currentFileDirectory
+     * @returns
+     * @memberof FileParser
+     */
+    private getFirstChildrenFromFile(sourceFile: ts.SourceFile): ts.Node {
+        this.nodeParser = new NodeParser(sourceFile);
+        const children: ts.Node[] = sourceFile.getChildren();
+        const node: ts.Node = children[0];
+        return node;
     }
 
 
