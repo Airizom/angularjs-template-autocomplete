@@ -102,7 +102,10 @@ export class AngularJSTemplateAutocomplete {
                 if (interpolationProperties[0] !== this.controllerOptions.controllerAs) {
                     return;
                 }
-                const controllerPropertyString: string = interpolationProperties[1];
+
+                let controllerPropertyString: string = interpolationProperties[1];
+                controllerPropertyString = this.htmlValidator.stripParenthesisFromProperty(controllerPropertyString);
+
                 let secondNode: ts.Identifier | undefined;
                 if (controllerPropertyString && this.controllerNode) {
                     this.controllerNode.forEachChild((node: ts.Node) => {

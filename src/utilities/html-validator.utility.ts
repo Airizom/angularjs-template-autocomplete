@@ -210,4 +210,18 @@ export class HtmlValidator {
         return '';
     }
 
+    /**
+     * Remove the parenthesis and everything inside it from a method.
+     *
+     * @param {string} property
+     * @returns {string}
+     * @memberof HtmlValidator
+     */
+    public stripParenthesisFromProperty(property: string): string {
+        if (property) {
+            return property.replace(/\(.*\)/g, '');
+        }
+        return '';
+    }
+
 }
