@@ -15,6 +15,16 @@ import * as os from 'os';
 export class FileParser {
 
     /**
+     * Config for the tyepscript program
+     *
+     * @static
+     * @type {(ts.ParsedCommandLine | undefined)}
+     * @memberof FileParser
+     */
+    public static parsedConfig: ts.ParsedCommandLine | undefined;
+
+
+    /**
      * File directory of the html template
      *
      * @type {string}
@@ -83,33 +93,19 @@ export class FileParser {
      * @returns {(ControllerOptions | undefined)}
      * @memberof FileParser
      */
-    public searchNodeChildrenFromFilesForControllerOptions(templateFilePath: string): ControllerOptions | undefined {
-        const options: ts.CompilerOptions = {
-            project: this.findNearestTsconfigFilePath(this.currentFileDirectory)
-        };
+    public searchSourceFilesForController(templateFilePath: string): ControllerOptions | undefined {
+        const controllerFilePath: string = this.getControllerFilePath(templateFilePath);
 
-        this.program = ts.createProgram(this.possibleControllerFileNames, options);
-        this.checker = this.program.getTypeChecker();
+        if (controllerFilePath) {
+            this.setParsedConfig();
+            this.program = ts.createProgram([controllerFilePath], FileParser.parsedConfig ? FileParser.parsedConfig.options : {});
+            this.checker = this.program.getTypeChecker();
 
-        let controllerOptions: ControllerOptions | undefined;
-        for (const sourceFile of this.program.getSourceFiles()) {
-            if (!sourceFile.isDeclarationFile) {
-                const node: ts.Node = this.getFirstChildrenFromFile(sourceFile);
-                if (node) {
-                    const nodeChildren: ts.Node[] = node.getChildren();
-                    for (const child of nodeChildren) {
-                        if (this.nodeParser) {
-                            controllerOptions = this.nodeParser.getTemplateControllerOptions(child, templateFilePath);
-                            const templateName: string = path.basename(templateFilePath);
-                            if (controllerOptions && controllerOptions.isValidController(templateName)) {
-                                return controllerOptions;
-                            }
-                        }
-                    }
-                }
-            }
+            const sourceFiles: readonly ts.SourceFile[] = this.program.getSourceFiles();
+            return this.getControllerOptionsInSourceFiles(sourceFiles, templateFilePath);
         }
     }
+
 
     /**
      * Get the template controller node that matches that name found on the controller options.
@@ -150,9 +146,113 @@ export class FileParser {
         if (this.checker) {
             return symbol.getName() + os.EOL +
                 ts.displayPartsToString(symbol.getDocumentationComment(this.checker)) + os.EOL +
-                this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!));
+                this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration));
         }
         return '';
+    }
+
+    /**
+     * Get the path of the controller if one exists
+     *
+     * @private
+     * @param {string} templateFilePath
+     * @returns {string}
+     * @memberof FileParser
+     */
+    private getControllerFilePath(templateFilePath: string): string {
+        let controllerOptions: ControllerOptions | undefined;
+        for (const file of this.possibleControllerFileNames) {
+            const node: ts.Node = this.getFirstChildNodeFromFileName(file);
+            if (this.currentSourceFile) {
+                this.nodeParser = new NodeParser(this.currentSourceFile);
+                if (node) {
+                    const nodeChildren: ts.Node[] = node.getChildren();
+                    for (let j: number = 0; j < nodeChildren.length; j++) {
+                        const nodeChild: ts.Node = nodeChildren[j];
+                        if (this.nodeParser) {
+                            controllerOptions = this.nodeParser.getTemplateControllerOptions(nodeChild, templateFilePath);
+                            const templateName: string = path.basename(templateFilePath);
+                            if (controllerOptions && controllerOptions.isValidController(templateName)) {
+                                return file;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Get first child node from a source file
+     *
+     * @private
+     * @param {string} fileName
+     * @returns {ts.Node}
+     * @memberof FileParser
+     */
+    private getFirstChildNodeFromFileName(fileName: string): ts.Node {
+        const baseName: string = path.basename(fileName);
+        this.currentSourceFile = ts.createSourceFile(
+            `${os.tmpdir()}${path.sep}${baseName}`,
+            fs.readFileSync(`${this.currentFileDirectory}${path.sep}${baseName}`,
+                { encoding: 'utf-8' }), ts.ScriptTarget.Latest
+        );
+        const children: ts.Node[] = this.currentSourceFile.getChildren();
+        const node: ts.Node = children[0];
+        return node;
+    }
+
+    /**
+     * Search for controller node in all source files
+     *
+     * @private
+     * @param {readonly} sourceFiles
+     * @param {*} ts
+     * @param {*} SourceFile
+     * @param {*} []
+     * @param {string} templateFilePath
+     * @returns {(ControllerOptions | undefined)}
+     * @memberof FileParser
+     */
+    private getControllerOptionsInSourceFiles(sourceFiles: readonly ts.SourceFile[], templateFilePath: string): ControllerOptions | undefined {
+        for (const sourceFile of sourceFiles) {
+            if (!sourceFile.isDeclarationFile) {
+                const node: ts.Node = this.getFirstChildrenFromFile(sourceFile);
+                if (node) {
+                    const nodeChildren: ts.Node[] = node.getChildren();
+                    for (const child of nodeChildren) {
+                        if (this.nodeParser) {
+                            const controllerOptions: ControllerOptions = this.nodeParser.getTemplateControllerOptions(child, templateFilePath);
+                            const templateName: string = path.basename(templateFilePath);
+                            if (controllerOptions && controllerOptions.isValidController(templateName)) {
+                                return controllerOptions;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if a config for the program already exists. If it doesn't find the tsconfig.json and create a config from it.
+     * This config will be used to create a program for typescript.
+     *
+     * @private
+     * @memberof FileParser
+     */
+    private setParsedConfig(): void {
+        if (!FileParser.parsedConfig) {
+            const tsConfigFilePath: string | undefined = this.findNearestTsconfigFilePath(this.currentFileDirectory);
+            if (tsConfigFilePath) {
+                const readConfig: {
+                    config?: any;
+                    error?: ts.Diagnostic | undefined;
+                } = ts.readConfigFile(tsConfigFilePath, ts.sys.readFile.bind(this));
+                FileParser.parsedConfig = ts.parseJsonConfigFileContent(readConfig.config, ts.sys, path.dirname(tsConfigFilePath));
+            }
+        }
     }
 
     /**
@@ -167,7 +267,7 @@ export class FileParser {
             return value.endsWith('.ts') || value.endsWith('.js');
         });
         this.possibleControllerFileNames = this.possibleControllerFileNames.map((value: string) => {
-            return `${this.currentFileDirectory}/${value}`;
+            return `${this.currentFileDirectory}${path.sep}${value}`;
         });
     }
 
@@ -205,7 +305,6 @@ export class FileParser {
      * @memberof FileParser
      */
     private getFirstChildrenFromFile(sourceFile: ts.SourceFile): ts.Node {
-        this.nodeParser = new NodeParser(sourceFile);
         const children: ts.Node[] = sourceFile.getChildren();
         const node: ts.Node = children[0];
         return node;

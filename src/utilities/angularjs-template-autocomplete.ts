@@ -122,7 +122,7 @@ export class AngularJSTemplateAutocomplete {
      * @memberof AngularJSTemplateAutocomplete
      */
     private activate(): void {
-        this.controllerOptions = this.fileParser.searchNodeChildrenFromFilesForControllerOptions(this.document.fileName) as ControllerOptions;
+        this.controllerOptions = this.fileParser.searchSourceFilesForController(this.document.fileName) as ControllerOptions;
         if (this.controllerOptions) {
             this.controllerNode = this.fileParser.getTemplateControllerNode(this.controllerOptions.controller);
         }
