@@ -24,7 +24,18 @@ export class NodeParser {
     public getTemplateControllerOptions(node: ts.Node, templateFilePath: string): ControllerOptions {
         const lastPathFragment: string = path.basename(templateFilePath);
         if (node.kind === ts.SyntaxKind.VariableStatement) {
-            const declaration: ts.VariableDeclaration = (node as ts.VariableStatement).declarationList.declarations[0];
+            let declaration: ts.VariableDeclaration = (node as ts.VariableStatement).declarationList.declarations[0];
+            if (declaration.initializer &&
+                (declaration.initializer as any).body &&
+                (declaration.initializer as any).body.kind === ts.SyntaxKind.Block &&
+                (declaration.initializer as any).body.statements &&
+                (declaration.initializer as any).body.statements[0] &&
+                (declaration.initializer as any).body.statements[0].declarationList &&
+                (declaration.initializer as any).body.statements[0].declarationList.declarations &&
+                (declaration.initializer as any).body.statements[0].declarationList.declarations[0]
+            ) {
+                declaration = (declaration.initializer as any).body.statements[0].declarationList.declarations[0];
+            }
             const controllerOptions: ControllerOptions = this.setControllerPropertiesFromVariable(declaration, lastPathFragment);
             if (controllerOptions.areControllerPropertiesSet && controllerOptions.doesTemplateFileNameMatchTemplateProperty(lastPathFragment)) {
                 return controllerOptions;
