@@ -80,7 +80,7 @@ export class NodeParser {
                         return controllerOptions;
                     } else if (this.templatePropertyHasTemplateName(templateUrl, templateName, controller)) {
                         const controllerOptions: ControllerOptions = new ControllerOptions();
-                        controllerOptions.controller = (controller as any).initializer.escapedText;
+                        controllerOptions.controller = this.getControllerName(controller);
                         controllerOptions.controllerAs = (controllerAs as any).initializer && (controllerAs as any).initializer.text ? (controllerAs as any).initializer.text : '$ctrl';
                         controllerOptions.templateUrl = (templateUrl as any).getFullText(this.currentSourceFile);
                         return controllerOptions;
@@ -89,6 +89,25 @@ export class NodeParser {
             }
         }
         return new ControllerOptions();
+    }
+
+    /**
+     * Get the name of the controller if it is in an array or just declared as a variable
+     *
+     * @private
+     * @param {(ts.NamedDeclaration | undefined)} controller
+     * @returns {string}
+     * @memberof NodeParser
+     */
+    private getControllerName(controller: ts.NamedDeclaration | undefined): string {
+        if ((controller as any).initializer.kind === ts.SyntaxKind.ArrayLiteralExpression) {
+            const arrayOfControllers: [] = (controller as any).initializer.elements;
+            const lastController: any = arrayOfControllers[arrayOfControllers.length - 1];
+            if (lastController.escapedText) {
+                return lastController.escapedText;
+            }
+        }
+        return (controller as any).initializer.escapedText;
     }
 
     /**
@@ -190,6 +209,13 @@ export class NodeParser {
         if (template && (template as any).initializer) {
             const templateTextValue: string = (template as any).getFullText(this.currentSourceFile);
             if (controller && controller.name && templateTextValue.includes(templateName)) {
+                if ((controller as any).initializer.kind === ts.SyntaxKind.ArrayLiteralExpression) {
+                    const arrayOfControllers: [] = (controller as any).initializer.elements;
+                    const lastController: any = arrayOfControllers[arrayOfControllers.length - 1];
+                    if ((lastController as any).escapedText) {
+                        return true;
+                    }
+                }
                 if ((controller as any).initializer.escapedText) {
                     return true;
                 }
