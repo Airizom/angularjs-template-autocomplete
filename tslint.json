@@ -1,15 +1,492 @@
 {
-	"rules": {
-		"no-string-throw": true,
-		"no-unused-expression": true,
-		"no-duplicate-variable": true,
-		"curly": true,
-		"class-name": true,
-		"semicolon": [
-			true,
-			"always"
-		],
-		"triple-equals": true
-	},
-	"defaultSeverity": "warning"
+    "rules": {
+        /**
+         * https://palantir.github.io/tslint/rules/member-ordering/
+         * A consistent ordering for class members can make classes easier to read, navigate, and edit.
+         *
+         * A common opposite practice to member-ordering is to keep related groups of classes together.
+         * Instead of creating classes with multiple separate groups, consider splitting class responsibilities apart across multiple single-responsibility classes.
+         */
+        "member-ordering": [
+            true,
+            {
+                "order": [
+                    "public-static-field",
+                    "public-instance-field",
+                    "protected-static-field",
+                    "protected-instance-field",
+                    "private-static-field",
+                    "private-instance-field",
+                    "public-constructor",
+                    "private-constructor",
+                    "public-static-method",
+                    "public-instance-method",
+                    "protected-static-method",
+                    "protected-instance-method",
+                    "private-static-method",
+                    "private-instance-method"
+                ]
+            }
+        ],
+        /**
+         * https://palantir.github.io/tslint/rules/no-inferrable-types/
+         * Explicit types where they can be easily inferred by the compiler make code more verbose.
+         */
+        "no-inferrable-types": false,
+        /**
+         * https://palantir.github.io/tslint/rules/typedef-whitespace/
+         * Determines if a space is required or not before the colon in a type specifier.
+         */
+        "typedef-whitespace": [
+            true,
+            {
+                "call-signature": "nospace",
+                "index-signature": "nospace",
+                "parameter": "nospace",
+                "property-declaration": "nospace",
+                "variable-declaration": "nospace"
+            }
+        ],
+        /**
+         * https://palantir.github.io/tslint/rules/curly/
+         */
+        "curly": true,
+        /**
+         * https://palantir.github.io/tslint/rules/no-return-await/
+         * An async function always wraps the return value in a Promise.
+         * Using return await just adds extra time before the overreaching promise is resolved without changing the semantics.
+         */
+        "no-return-await": true,
+        /**
+         * https://palantir.github.io/tslint/rules/no-var-keyword/
+         * Declaring variables using var has several edge case behaviors that make var unsuitable for modern code.
+         * Variables declared by var have their parent function block as their scope, ignoring other control flow statements.
+         * vars have declaration “hoisting” (similar to functions) and can appear to be used before declaration.
+         *
+         * Variables declared by const and let instead have as their scope the block in which they are defined,
+         * and are not allowed to used before declaration or be re-declared with another const or let.
+         */
+        "no-var-keyword": true,
+        /**
+         * https://palantir.github.io/tslint/rules/prefer-object-spread/
+         * Object spread allows for better type checking and inference.
+         */
+        "prefer-object-spread": false,
+        /**
+         * https://palantir.github.io/tslint/rules/indent/
+         * Using only one of tabs or spaces for indentation leads to more consistent editor behavior,
+         * cleaner diffs in version control, and easier programmatic manipulation.
+         */
+        "indent": [true, "spaces", 4],
+        /**
+         * https://palantir.github.io/tslint/rules/eofline/
+         * It is a standard convention to end files with a newline.
+         */
+        "eofline": true,
+        /**
+         * https://palantir.github.io/tslint/rules/prefer-const/
+         * Requires that variable declarations use const instead of let and var if possible.
+         *
+         * If a variable is only assigned to once when it is declared, it should be declared using ‘const’
+         */
+        "prefer-const": [true, {
+            "destructuring": "all"
+        }],
+        /**
+         * https://palantir.github.io/tslint/rules/align/
+         * Helps maintain a readable, consistent style in your codebase.
+         *
+         * Consistent alignment for code statements helps keep code readable and clear. Statements misaligned from the standard can be harder to read and understand.
+         */
+        "align": [true, "elements", "members", "parameters", "statements"],
+        /**
+         * https://palantir.github.io/tslint/rules/arrow-parens/
+         * Maintains stylistic consistency with other arrow function definitions.
+         */
+        "arrow-parens": [true, "ban-single-arg-parens"],
+        /**
+         * https://palantir.github.io/tslint/rules/comment-format/
+         * Helps maintain a consistent, readable style in your codebase.
+         */
+        "comment-format": [true, "check-space"],
+        /**
+         * https://palantir.github.io/tslint/rules/no-consecutive-blank-lines/
+         * Helps maintain a readable style in your codebase.
+         *
+         * Extra blank lines take up extra space and add little to a semantic understanding of the code. It can be harder to read through files when fewer components can fit into the screen.
+         * If you find a file is so large you feel a need to split them up with extra blank lines or comments, consider splitting your file into smaller files.
+         */
+        "no-consecutive-blank-lines": [true, 2],
+        /**
+         * https://palantir.github.io/tslint/rules/no-irregular-whitespace/
+         * Helps maintain a readable style in your codebase.
+         *
+         * Extra blank lines take up extra space and add little to a semantic understanding of the code. It can be harder to read through files when fewer components can fit into the screen.
+         * If you find a file is so large you feel a need to split them up with extra blank lines or comments, consider splitting your file into smaller files.
+         */
+        "no-irregular-whitespace": true,
+        /**
+         * https://palantir.github.io/tslint/rules/object-literal-key-quotes/
+         * Enforces consistent object literal property quote style.
+         *
+         * Object literal property names can be defined in two ways: using literals or using strings.
+         */
+        "object-literal-key-quotes": [true, "as needed"],
+        /**
+         * https://palantir.github.io/tslint/rules/quotemark/
+         * Requires single quotes, and only use template string if string interpolation
+         */
+        "quotemark": [true, "single", "avoid-escape", "avoid-template"],
+        /**
+         * https://palantir.github.io/tslint/rules/ordered-imports/
+         * Requires that import statements be alphabetized and grouped.
+         */
+        "ordered-imports": false,
+        /**
+         * https://palantir.github.io/tslint/rules/semicolon/
+         * Enforces consistent semicolon usage at the end of every statement.
+         */
+        "semicolon": [true, "always"],
+        /**
+         * https://palantir.github.io/tslint/rules/space-before-function-paren/
+         * Require or disallow a space before function parenthesis
+         */
+        "space-before-function-paren": [true, {
+            "anonymous": "never",
+            "named": "never",
+            "asyncArrow": "always",
+            "method": "never",
+            "constructor": "never"
+        }],
+        /**
+         * https://palantir.github.io/tslint/rules/await-promise/
+         * Warns for an awaited value that is not a Promise.
+         */
+        "await-promise": true,
+        /**
+         * https://palantir.github.io/tslint/rules/no-console/
+         * Bans the use of specified console methods.
+         */
+        "no-console": [true, "log", "error", "warn"],
+        /**
+         * https://palantir.github.io/tslint/rules/triple-equals/
+         * Requires === and !== in place of == and !=.
+         */
+        "triple-equals": true,
+        /**
+         * https://palantir.github.io/tslint/rules/no-default-export/
+         * Named imports/exports promote clarity. In addition, current tooling differs on the correct way to handle default imports/exports.
+         * Avoiding them all together can help avoid tooling bugs and conflicts.
+         */
+        "no-default-export": true,
+        /**
+         * https://palantir.github.io/tslint/rules/class-name/
+         * Makes it easy to differentiate classes from regular variables at a glance.
+         *
+         * JavaScript and general programming convention is to refer to classes in PascalCase.
+         * It’s confusing to use camelCase or other conventions for class names.
+         */
+        "class-name": true,
+
+        /**
+         * https://palantir.github.io/tslint/rules/file-name-casing/
+         * Helps maintain a consistent style across a file hierarchy
+         */
+        "file-name-casing": false,
+
+        /**
+         * https://palantir.github.io/tslint/rules/completed-docs/
+         * Helps ensure important components are documented.
+         */
+
+        "completed-docs": [true, "enums", "enum-members", "interfaces", "functions", "methods"],
+
+        /**
+         * https://palantir.github.io/tslint/rules/jsdoc-format/
+         * Enforces basic format rules for JSDoc comments.
+         */
+
+        "jsdoc-format": true,
+
+        /**
+         * https://palantir.github.io/tslint/rules/no-redundant-jsdoc/
+         * Forbids JSDoc which duplicates TypeScript functionality.
+         */
+        "no-redundant-jsdoc": false,
+        /**
+         * https://palantir.github.io/tslint/rules/variable-name/
+         * Checks variable names for various errors.
+         */
+        "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore", "allow-trailing-underscore"],
+        "no-namespace": true,
+        "typedef": [true, "call-signature", "parameter", "member-variable-declaration", "property-declaration", "object-destructuring", "variable-declaration", "array-destructuring"],
+        "switch-default": true,
+        "no-switch-case-fall-through": true,
+        "no-var-requires": true, // es6 imports used
+        "no-duplicate-switch-case": true,
+        "arrow-return-shorthand": true,
+        "no-duplicate-imports": true,
+        "no-angle-bracket-type-assertion": true,
+        "no-conditional-assignment": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-non-null-assertion/
+         */
+        "no-non-null-assertion": true,
+        "no-unnecessary-qualifier": true,
+        "no-string-throw": true,
+        "no-floating-promises": [true, "JQueryPromise"],
+        "no-import-side-effect": [true, {
+            "ignore-module": "^(?!rxjs/)"
+        }],
+        "max-line-length": [true, {
+            "limit": 160,
+            "ignore-pattern": "^import |^export {(.*?)}"
+        }],
+        "import-spacing": true,
+        "match-default-export-name": true,
+        "newline-before-return": false,
+        "no-duplicate-variable": true,
+        "no-eval": true,
+        "no-any": false,
+        "no-internal-module": true,
+        "no-trailing-whitespace": true,
+        "no-unused-expression": true,
+        "binary-expression-operand-order": true,
+        "radix": true,
+        "restrict-plus-operands": true,
+        "prefer-conditional-expression": [true, "check-else-if"],
+        "cyclomatic-complexity": [true, 1],
+        "prefer-readonly": true,
+        "interface-name": [true, "always-prefix"],
+        "prefer-template": true,
+        "prefer-switch": [true, {
+            "min-cases": 3
+        }],
+        "only-arrow-functions": [true, "allow-declarations", "allow-named-functions"],
+        "one-line": [
+            true,
+            "check-catch",
+            "check-else",
+            "check-finally",
+            "check-open-brace",
+            "check-whitespace"
+        ],
+        "trailing-comma": false,
+        "whitespace": [
+            true,
+            "check-branch",
+            "check-decl",
+            "check-module",
+            "check-preblock",
+            "check-operator",
+            "check-separator",
+            "check-type",
+            "check-typecast"
+        ],
+        /**
+         * https: //palantir.github.io/tslint/rules/adjacent-overload-signatures/
+         *
+         */
+        "adjacent-overload-signatures": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/ban-ts-ignore/
+         */
+        "ban-ts-ignore": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/member-access/
+         */
+        "member-access": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-magic-numbers/
+         */
+        "no-magic-numbers": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-parameter-reassignment/
+         */
+        "no-parameter-reassignment": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-reference/
+         */
+        "no-reference": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/ban-comma-operator/
+         */
+        "ban-comma-operator": true,
+        "ban": [
+            true,
+            "eval",
+            {
+                "name": "fdescribe",
+                "message": "Don't be an idiot!"
+            },
+            {
+                "name": "fit",
+                "message": "Don't be an idiot!"
+            }
+        ],
+        /*
+         * https: //palantir.github.io/tslint/rules/forin/
+         */
+        "forin": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/function-constructor/
+         */
+        "function-constructor": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/label-position/
+         */
+        "label-position": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-arg/
+         */
+        "no-arg": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-construct/
+         */
+        "no-construct": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-debugger/
+         */
+        "no-debugger": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-duplicate-super/
+         */
+        "no-duplicate-super": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-dynamic-delete/
+         */
+        "no-dynamic-delete": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-empty/
+         */
+        "no-empty": [true, "allow-empty-catch"],
+        /**
+         * https: //palantir.github.io/tslint/rules/no-for-in-array/
+         */
+        "no-for-in-array": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-inferred-empty-object-type/
+         */
+        "no-inferred-empty-object-type": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-invalid-template-strings/
+         */
+        "no-invalid-template-strings": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-invalid-this/
+         */
+        "no-invalid-this": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-misused-new/
+         */
+        "no-misused-new": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-null-keyword/
+         */
+        "no-null-keyword": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-object-literal-type-assertion/
+         */
+        "no-object-literal-type-assertion": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-shadowed-variable/
+         */
+        "no-shadowed-variable": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-sparse-arrays/
+         */
+        "no-sparse-arrays": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-unbound-method/
+         */
+        "no-unbound-method": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-unsafe-any/
+         */
+        "no-unsafe-any": false,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-unsafe-finally/
+         */
+        "no-unsafe-finally": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-use-before-declare/
+         */
+        "no-use-before-declare": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-void-expression/
+         */
+        "no-void-expression": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/typeof-compare/
+         */
+        "typeof-compare": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/unnecessary-constructor/
+         */
+        "unnecessary-constructor": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/use-default-type-parameter/
+         */
+        "use-default-type-parameter": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/use-isnan/
+         */
+        "use-isnan": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/deprecation/
+         */
+        "deprecation": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/linebreak-style/
+         */
+        "linebreak-style": [true, "CRLF"],
+        /**
+         * https: //palantir.github.io/tslint/rules/max-classes-per-file/
+         */
+        "max-classes-per-file": [true, 1],
+        /**
+         * https: //palantir.github.io/tslint/rules/array-type/
+         */
+        "array-type": [true, "array"],
+        /**
+         * https: //palantir.github.io/tslint/rules/comment-type/
+         */
+        "comment-type": [true, "doc", "singleline", "multiline"],
+        /**
+         * https: //palantir.github.io/tslint/rules/new-parens/
+         */
+        "new-parens": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-boolean-literal-compare/
+         */
+        "no-boolean-literal-compare": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-unnecessary-callback-wrapper/
+         */
+        "no-unnecessary-callback-wrapper": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/no-unnecessary-initializer/
+         */
+        "no-unnecessary-initializer": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/number-literal-format/
+         */
+        "number-literal-format": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/object-literal-shorthand/
+         */
+        "object-literal-shorthand": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/prefer-method-signature/
+         */
+        "prefer-method-signature": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/prefer-while/
+         */
+        "prefer-while": true,
+        /**
+         * https: //palantir.github.io/tslint/rules/switch-final-break/
+         */
+        "switch-final-break": true
+    }
 }
