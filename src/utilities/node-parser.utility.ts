@@ -22,13 +22,17 @@ export class NodeParser {
      * @memberof NodeParser
      */
     public getTemplateControllerOptions(node: ts.Node, templateFilePath: string): ControllerOptions {
+        const lastPathFragment: string = path.basename(templateFilePath);
         if (node.kind === ts.SyntaxKind.VariableStatement) {
-            //
+            const declaration: ts.VariableDeclaration = (node as ts.VariableStatement).declarationList.declarations[0];
+            const controllerOptions: ControllerOptions = this.setControllerPropertiesFromVariable(declaration, lastPathFragment);
+            if (controllerOptions.areControllerPropertiesSet && controllerOptions.doesTemplateFileNameMatchTemplateProperty(lastPathFragment)) {
+                return controllerOptions;
+            }
         }
         if (node.kind === ts.SyntaxKind.ClassDeclaration) {
-            const members: ts.NodeArray<ts.ClassElement> = (node as ts.ClassDeclaration).members;
-            const lastPathFragment: string = path.basename(templateFilePath);
-            const controllerOptions: ControllerOptions = this.setControllerProperties(members, lastPathFragment);
+            const members: ts.NodeArray<ts.NamedDeclaration> = (node as ts.ClassDeclaration).members;
+            const controllerOptions: ControllerOptions = this.setControllerPropertiesFromClass(members, lastPathFragment);
             if (controllerOptions.areControllerPropertiesSet && controllerOptions.doesTemplateFileNameMatchTemplateProperty(lastPathFragment)) {
                 return controllerOptions;
             }
@@ -37,22 +41,111 @@ export class NodeParser {
     }
 
     /**
+     * Parse variable declaration and try and find controller options
+     *
+     * @private
+     * @param {ts.VariableDeclaration} declaration
+     * @returns {ControllerOptions}
+     * @memberof NodeParser
+     */
+    private setControllerPropertiesFromVariable(declaration: ts.VariableDeclaration, templateName: string): ControllerOptions {
+        if (declaration.initializer) {
+            const properties: ts.NodeArray<ts.NamedDeclaration> = (declaration.initializer as ts.ObjectLiteralExpression).properties;
+            if (properties) {
+                const controller: ts.NamedDeclaration | undefined = this.getControllerPropertyFromProperties(properties);
+
+                const template: ts.NamedDeclaration | undefined = this.getTemplatePropertyFromProperties(properties, 'template');
+
+                const templateUrl: ts.NamedDeclaration | undefined = this.getTemplatePropertyFromProperties(properties, 'templateUrl');
+
+                const controllerAs: ts.NamedDeclaration | undefined = this.getControllerAsPropertyFromProperties(properties);
+
+                if (this.hasControllerAndTemplateProperties(controller, template, templateUrl)) {
+                    if (this.templatePropertyHasTemplateName(template, templateName, controller)) {
+                        const controllerOptions: ControllerOptions = new ControllerOptions();
+                        controllerOptions.controller = (controller as any).initializer.escapedText;
+                        controllerOptions.controllerAs = controllerAs ? (controllerAs as any).initializer.text : '$ctrl';
+                        controllerOptions.template = (template as any).getFullText(this.currentSourceFile);
+                        return controllerOptions;
+                    } else if (this.templatePropertyHasTemplateName(templateUrl, templateName, controller)) {
+                        const controllerOptions: ControllerOptions = new ControllerOptions();
+                        controllerOptions.controller = (controller as any).initializer.escapedText;
+                        controllerOptions.controllerAs = (controllerAs as any).initializer && (controllerAs as any).initializer.text ? (controllerAs as any).initializer.text : '$ctrl';
+                        controllerOptions.templateUrl = (templateUrl as any).getFullText(this.currentSourceFile);
+                        return controllerOptions;
+                    }
+                }
+            }
+        }
+        return new ControllerOptions();
+    }
+
+    /**
+     * Get controllerAs property off of the properties array
+     *
+     * @private
+     * @param {ts.NodeArray<ts.NamedDeclaration>} properties
+     * @returns {(ts.NamedDeclaration | undefined)}
+     * @memberof NodeParser
+     */
+    private getControllerAsPropertyFromProperties(properties: ts.NodeArray<ts.NamedDeclaration>): ts.NamedDeclaration | undefined {
+        return properties.find((value: ts.NamedDeclaration) => {
+            if ((value as any).name) {
+                return (value as any).name.escapedText === 'controllerAs';
+            }
+        });
+    }
+
+    /**
+     * Get property that is named template
+     *
+     * @private
+     * @param {ts.NodeArray<ts.NamedDeclaration>} properties
+     * @param {string} escapedText
+     * @returns {(ts.NamedDeclaration | undefined)}
+     * @memberof NodeParser
+     */
+    private getTemplatePropertyFromProperties(properties: ts.NodeArray<ts.NamedDeclaration>, escapedText: string): ts.NamedDeclaration | undefined {
+        return properties.find((value: ts.NamedDeclaration) => {
+            if (value.name) {
+                return (value.name as any).escapedText === escapedText;
+            }
+        });
+    }
+
+    /**
+     * Iterate over properties and find the node that has name of controller
+     *
+     * @private
+     * @param {ts.NodeArray<ts.NamedDeclaration>} properties
+     * @returns {(ts.NamedDeclaration | undefined)}
+     * @memberof NodeParser
+     */
+    private getControllerPropertyFromProperties(properties: ts.NodeArray<ts.NamedDeclaration>): ts.NamedDeclaration | undefined {
+        return properties.find((value: ts.NamedDeclaration) => {
+            if ((value as any).name) {
+                return (value as any).name.escapedText === 'controller';
+            }
+        });
+    }
+
+    /**
      * Set the correct controller options from an array of nodes
      *
      * @private
-     * @param {ts.NodeArray<ts.ClassElement>} members
+     * @param {ts.NodeArray<ts.NamedDeclaration>} members
      * @param {string} templateName
      * @returns {ControllerOptions}
      * @memberof NodeParser
      */
-    private setControllerProperties(members: ts.NodeArray<ts.ClassElement>, templateName: string): ControllerOptions {
-        const controller: ts.ClassElement | undefined = this.getControllerPropertyFromClassElement(members);
+    private setControllerPropertiesFromClass(members: ts.NodeArray<ts.NamedDeclaration>, templateName: string): ControllerOptions {
+        const controller: ts.NamedDeclaration | undefined = this.getControllerPropertyFromClassElement(members);
 
-        const template: ts.ClassElement | undefined = this.getTemplatePropertyFromClassElement(members, 'template');
+        const template: ts.NamedDeclaration | undefined = this.getTemplatePropertyFromClassElement(members, 'template');
 
-        const templateUrl: ts.ClassElement | undefined = this.getTemplatePropertyFromClassElement(members, 'templateUrl');
+        const templateUrl: ts.NamedDeclaration | undefined = this.getTemplatePropertyFromClassElement(members, 'templateUrl');
 
-        const controllerAs: ts.ClassElement | undefined = this.getControllerAsPropertyFromClassElement(members);
+        const controllerAs: ts.NamedDeclaration | undefined = this.getControllerAsPropertyFromClassElement(members);
 
         if (this.hasControllerAndTemplateProperties(controller, template, templateUrl)) {
             if (this.templatePropertyHasTemplateName(template, templateName, controller)) {
@@ -76,13 +169,13 @@ export class NodeParser {
      * Return if the element has a template name
      *
      * @private
-     * @param {(ts.ClassElement | undefined)} template
+     * @param {(ts.NamedDeclaration | undefined)} template
      * @param {string} templateName
-     * @param {(ts.ClassElement | undefined)} controller
+     * @param {(ts.NamedDeclaration | undefined)} controller
      * @returns {boolean}
      * @memberof NodeParser
      */
-    private templatePropertyHasTemplateName(template: ts.ClassElement | undefined, templateName: string, controller: ts.ClassElement | undefined): boolean {
+    private templatePropertyHasTemplateName(template: ts.NamedDeclaration | undefined, templateName: string, controller: ts.NamedDeclaration | undefined): boolean {
         if (template && (template as any).initializer) {
             const templateTextValue: string = (template as any).getFullText(this.currentSourceFile);
             if (controller && controller.name && templateTextValue.includes(templateName)) {
@@ -98,16 +191,16 @@ export class NodeParser {
      * Return if the controller and template name exists
      *
      * @private
-     * @param {(ts.ClassElement | undefined)} controller
-     * @param {(ts.ClassElement | undefined)} template
-     * @param {(ts.ClassElement | undefined)} templateUrl
+     * @param {(ts.NamedDeclaration | undefined)} controller
+     * @param {(ts.NamedDeclaration | undefined)} template
+     * @param {(ts.NamedDeclaration | undefined)} templateUrl
      * @returns {boolean}
      * @memberof NodeParser
      */
     private hasControllerAndTemplateProperties(
-        controller: ts.ClassElement | undefined,
-        template: ts.ClassElement | undefined,
-        templateUrl: ts.ClassElement | undefined
+        controller: ts.NamedDeclaration | undefined,
+        template: ts.NamedDeclaration | undefined,
+        templateUrl: ts.NamedDeclaration | undefined
     ): boolean {
         if (controller && (template || templateUrl)) {
             return true;
@@ -119,13 +212,13 @@ export class NodeParser {
      * Get the template name from the node array
      *
      * @private
-     * @param {ts.NodeArray<ts.ClassElement>} members
+     * @param {ts.NodeArray<ts.NamedDeclaration>} members
      * @param {string} escapedText
-     * @returns {(ts.ClassElement | undefined)}
+     * @returns {(ts.NamedDeclaration | undefined)}
      * @memberof NodeParser
      */
-    private getTemplatePropertyFromClassElement(members: ts.NodeArray<ts.ClassElement>, escapedText: string): ts.ClassElement | undefined {
-        return members.find((value: ts.ClassElement) => {
+    private getTemplatePropertyFromClassElement(members: ts.NodeArray<ts.NamedDeclaration>, escapedText: string): ts.NamedDeclaration | undefined {
+        return members.find((value: ts.NamedDeclaration) => {
             if (value.name) {
                 return (value.name as any).escapedText === escapedText;
             }
@@ -136,12 +229,12 @@ export class NodeParser {
      * Get congroller property from class element node array
      *
      * @private
-     * @param {ts.NodeArray<ts.ClassElement>} members
-     * @returns {(ts.ClassElement | undefined)}
+     * @param {ts.NodeArray<ts.NamedDeclaration>} members
+     * @returns {(ts.NamedDeclaration | undefined)}
      * @memberof NodeParser
      */
-    private getControllerPropertyFromClassElement(members: ts.NodeArray<ts.ClassElement>): ts.ClassElement | undefined {
-        return members.find((value: ts.ClassElement) => {
+    private getControllerPropertyFromClassElement(members: ts.NodeArray<ts.NamedDeclaration>): ts.NamedDeclaration | undefined {
+        return members.find((value: ts.NamedDeclaration) => {
             if (value.name) {
                 return (value.name as any).escapedText === 'controller';
             }
@@ -152,12 +245,12 @@ export class NodeParser {
      * Get the controllerAs property from class element node array
      *
      * @private
-     * @param {ts.NodeArray<ts.ClassElement>} members
-     * @returns {(ts.ClassElement | undefined)}
+     * @param {ts.NodeArray<ts.NamedDeclaration>} members
+     * @returns {(ts.NamedDeclaration | undefined)}
      * @memberof NodeParser
      */
-    private getControllerAsPropertyFromClassElement(members: ts.NodeArray<ts.ClassElement>): ts.ClassElement | undefined {
-        return members.find((value: ts.ClassElement) => {
+    private getControllerAsPropertyFromClassElement(members: ts.NodeArray<ts.NamedDeclaration>): ts.NamedDeclaration | undefined {
+        return members.find((value: ts.NamedDeclaration) => {
             if (value.name) {
                 return (value.name as any).escapedText === 'controllerAs';
             }
