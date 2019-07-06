@@ -4,6 +4,7 @@
 	"description": "Auto-complete angularjs controller properties and methods from an html template",
 	"version": "1.0.0",
 	"icon": "angularjs-128.png",
+	"publisher": "michaelisom",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Airizom/angularjs-template-autocomplete.git"
