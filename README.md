@@ -1,6 +1,6 @@
 # AngularJS Template Autocomplete for Visual Studio Code
 
-This extension will allow the user to autocomple AngularJS controller properties and methods inside an HTML template.
+This extension will allow the user to autocomplete AngularJS controller properties and methods inside an HTML template.
 
 ## Features
 
