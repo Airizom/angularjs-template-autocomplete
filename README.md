@@ -4,13 +4,13 @@ This extension will allow the user to autocomple AngularJS controller properties
 
 ## Features
 
-Autocomplete controller name.
-Autocomplete controller properties.
+Autocomplete controller name.<br/>
+Autocomplete controller properties.<br/>
 Autocomplete will also work inside of AngularJS interpolation.
 
 ## Requirements
 
-Project must use TypeScript
+Project must use TypeScript.<br/>
 HTML template, controller and options must be in the same directory.
 
 ## Known Issues
