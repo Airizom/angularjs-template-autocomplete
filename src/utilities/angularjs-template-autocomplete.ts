@@ -160,9 +160,9 @@ export class AngularJSTemplateAutocomplete {
                 const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(type);
                 for (const property of properties) {
                     const item: vscode.CompletionItem = new vscode.CompletionItem(property.escapedName.toString());
+                    item.documentation = this.fileParser.serializeSymbol(property);
                     if (property.flags === ts.SymbolFlags.Method) {
                         item.kind = vscode.CompletionItemKind.Method;
-                        item.documentation = this.fileParser.serializeSymbol(property);
                     } else {
                         item.kind = vscode.CompletionItemKind.Property;
                     }
@@ -198,6 +198,7 @@ export class AngularJSTemplateAutocomplete {
                     if (ts.isPropertyDeclaration(node)) {
                         const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
                         item.kind = vscode.CompletionItemKind.Property;
+                        item.documentation = this.getDocumentationFromNode(node);
                         items.push(item);
                     }
                     if (ts.isMethodDeclaration(node)) {
@@ -215,13 +216,13 @@ export class AngularJSTemplateAutocomplete {
      * Get documentation for a method
      *
      * @private
-     * @param {ts.MethodDeclaration} node
+     * @param {ts.ClassElement} node
      * @returns {string}
      * @memberof AngularJSTemplateAutocomplete
      */
-    private getDocumentationFromNode(node: ts.MethodDeclaration): string {
+    private getDocumentationFromNode(node: ts.ClassElement): string {
         let docs: string = '';
-        if (this.fileParser.checker) {
+        if (this.fileParser.checker && node.name) {
             const symbol: ts.Symbol | undefined = this.fileParser.checker.getSymbolAtLocation(node.name);
             if (symbol) {
                 docs = this.fileParser.serializeSymbol(symbol);
