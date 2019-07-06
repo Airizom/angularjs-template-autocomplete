@@ -144,7 +144,8 @@ export class FileParser {
      */
     public serializeSymbol(symbol: ts.Symbol): string {
         if (this.checker) {
-            return symbol.getName() + os.EOL +
+            const typeOfDeclaration: string = ts.isMethodDeclaration(symbol.valueDeclaration) ? 'method' : 'property';
+            return `(${typeOfDeclaration}) ${symbol.getName()}${os.EOL}` +
                 ts.displayPartsToString(symbol.getDocumentationComment(this.checker)) + os.EOL +
                 this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration));
         }
@@ -167,8 +168,7 @@ export class FileParser {
                 this.nodeParser = new NodeParser(this.currentSourceFile);
                 if (node) {
                     const nodeChildren: ts.Node[] = node.getChildren();
-                    for (let j: number = 0; j < nodeChildren.length; j++) {
-                        const nodeChild: ts.Node = nodeChildren[j];
+                    for (const nodeChild of nodeChildren) {
                         if (this.nodeParser) {
                             controllerOptions = this.nodeParser.getTemplateControllerOptions(nodeChild, templateFilePath);
                             const templateName: string = path.basename(templateFilePath);
