@@ -1,8 +1,13 @@
 {
 	"name": "angularjs-template-autocomplete",
-	"displayName": "angularjs-template-autocomplete",
-	"description": "Auto-complete angularjs controller properties from an html template",
-	"version": "0.0.1",
+	"displayName": "AngularJS Template Autocomplete",
+	"description": "Auto-complete angularjs controller properties and methods from an html template",
+	"version": "1.0.0",
+	"icon": "angularjs-128.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Airizom/angularjs-template-autocomplete.git"
+	},
 	"engines": {
 		"vscode": "^1.35.0"
 	},
@@ -15,12 +20,7 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"commands": [
-			{
-				"command": "extension.helloWorld",
-				"title": "Hello World"
-			}
-		]
+		"commands": []
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
