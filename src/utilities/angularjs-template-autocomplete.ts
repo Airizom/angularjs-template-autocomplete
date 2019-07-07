@@ -76,7 +76,10 @@ export class AngularJSTemplateAutocomplete {
             const interpolationText: string = this.htmlValidator.getInterpolationText();
             let interpolationProperties: string[] = interpolationText.split('.');
             if (interpolationProperties.length === 1) {
-                items.push(new vscode.CompletionItem(this.controllerOptions.controllerAs));
+                const controllerItem: vscode.CompletionItem = new vscode.CompletionItem(this.controllerOptions.controllerAs);
+                controllerItem.kind = vscode.CompletionItemKind.Class;
+                controllerItem.documentation = this.controllerOptions.controller;
+                items.push(controllerItem);
             } else if (interpolationProperties.length === 2 && interpolationProperties[0] === this.controllerOptions.controllerAs) {
                 this.setSecondLevelProperties(items);
             } else if (interpolationProperties.length >= 3) {
@@ -163,6 +166,7 @@ export class AngularJSTemplateAutocomplete {
                     item.documentation = this.fileParser.serializeSymbol(property);
                     if (property.flags === ts.SymbolFlags.Method) {
                         item.kind = vscode.CompletionItemKind.Method;
+                        item.insertText = `${property.escapedName}()`;
                     } else {
                         item.kind = vscode.CompletionItemKind.Property;
                     }
@@ -204,6 +208,7 @@ export class AngularJSTemplateAutocomplete {
                     if (ts.isMethodDeclaration(node)) {
                         const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
                         item.kind = vscode.CompletionItemKind.Method;
+                        item.insertText = `${(node as any).name.escapedText}()`;
                         item.documentation = this.getDocumentationFromNode(node);
                         items.push(item);
                     }

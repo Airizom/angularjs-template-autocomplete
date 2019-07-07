@@ -44,6 +44,15 @@ export class HtmlValidator {
      */
     private interpolationStartText: string = '';
 
+    /**
+     * The text that occurs at the end of a interpolation. Such a }}, ', or "
+     *
+     * @private
+     * @type {string}
+     * @memberof HtmlValidator
+     */
+    private interpolatinoEndText: string = '';
+
     constructor(public document: vscode.TextDocument, public position: vscode.Position) {
         this.beforeText = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
         this.lastLine = document.lineAt(document.lineCount - 1);
@@ -69,6 +78,11 @@ export class HtmlValidator {
     public getInterpolationText(): string {
         const lastIndexOfStringInterpolationStartText: number = this.beforeText.lastIndexOf(this.interpolationStartText);
         const interpolationTextBeginning: string = this.beforeText.substring(lastIndexOfStringInterpolationStartText, this.beforeText.length);
+        const firstIndexOfInterpolationEndText: number = this.afterText.indexOf(this.interpolatinoEndText);
+        const interpolatinoTextEnd: string = this.afterText.substring(0, firstIndexOfInterpolationEndText);
+        if (this.isInsideParenthesis(interpolationTextBeginning, interpolatinoTextEnd)) {
+            return this.getTextInsideParenthesis(interpolationTextBeginning.substring(2), interpolatinoTextEnd);
+        }
         if (interpolationTextBeginning) {
             const interpolationValues: string[] = interpolationTextBeginning.substring(2).split(' ');
             const lastValue: string | undefined = interpolationValues.pop();
@@ -77,6 +91,75 @@ export class HtmlValidator {
             }
         }
         return '';
+    }
+
+    /**
+     * Get the text that is enclosed in parenthesis
+     *
+     * @param {string} interpolationTextBeginning
+     * @param {string} interpolatinoTextEnd
+     * @returns {string}
+     * @memberof HtmlValidator
+     */
+    getTextInsideParenthesis(interpolationTextBeginning: string, interpolatinoTextEnd: string): string {
+        const lastIndexOfOpenParenthesis: number = interpolationTextBeginning.lastIndexOf('(');
+        const interpolationStartText: string = interpolationTextBeginning.substring(lastIndexOfOpenParenthesis + 1);
+        const firstIndexOfInterpolationEndText: number = interpolatinoTextEnd.indexOf(')');
+        const interpolatinoEndText: string = interpolationTextBeginning.substring(0, firstIndexOfInterpolationEndText);
+        const interpolationText: string = `${interpolationStartText}${interpolatinoEndText}`.replace(' ', '');
+        return interpolationText;
+    }
+
+    /**
+     * Determine if the interpolation text is inside a method
+     *
+     * @private
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
+    private isInsideParenthesis(startText: string, endText: string): boolean {
+        return this.hasOpenParenthesis(startText) && this.hasCloseParenthesis(endText);
+    }
+
+    /**
+     * Determine if a close parenthesis occurs before an open parenthesis
+     *
+     * @private
+     * @param {string} endText
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
+    private hasCloseParenthesis(endText: string): boolean {
+        for (let index: number = 0; index < endText.length; index++) {
+            if (endText.charAt(index) === '(') {
+                return false;
+            }
+            if (endText.charAt(index) === ')') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if open parenthesis exists before close parenthesis in a string
+     *
+     * @private
+     * @param {string} startText
+     * @returns {boolean}
+     * @memberof HtmlValidator
+     */
+    private hasOpenParenthesis(startText: string): boolean {
+        for (let index: number = startText.length - 1; index >= 0; index--) {
+            if (startText.charAt(index) === ')') {
+                return false;
+            }
+            if (startText.charAt(index) === '(') {
+                return true;
+            }
+        }
+        return false;
+
     }
 
     /**
@@ -153,6 +236,7 @@ export class HtmlValidator {
             const character: string = this.afterText.charAt(i);
             if (character === beforeTextCharacter) {
                 this.interpolationStartText = `=${beforeTextCharacter}`;
+                this.interpolatinoEndText = beforeTextCharacter;
                 return true;
             }
         }
@@ -192,6 +276,7 @@ export class HtmlValidator {
                     const previousCharacter: string = this.afterText.charAt(i + 1);
                     if (previousCharacter === '}') {
                         this.interpolationStartText = '{{';
+                        this.interpolatinoEndText = '}}';
                         return true;
                     }
                     return false;
