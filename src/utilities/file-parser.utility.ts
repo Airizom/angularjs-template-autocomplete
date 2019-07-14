@@ -144,8 +144,7 @@ export class FileParser {
      */
     public serializeSymbol(symbol: ts.Symbol): string {
         if (this.checker) {
-            const typeOfDeclaration: string = ts.isMethodDeclaration(symbol.valueDeclaration) || ts.isMethodSignature(symbol.valueDeclaration) ? 'method' : 'property';
-
+            const typeOfDeclaration: string = ts.isMethodDeclaration(symbol.valueDeclaration) ? 'method' : 'property';
             return `(${typeOfDeclaration}) ${symbol.getName()}${os.EOL}` +
                 ts.displayPartsToString(symbol.getDocumentationComment(this.checker)) + os.EOL +
                 this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration));
