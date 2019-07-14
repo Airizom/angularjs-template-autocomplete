@@ -90,31 +90,46 @@ export class AngularJSTemplateAutocomplete {
                 let controllerPropertyString: string = interpolationProperties[1];
                 controllerPropertyString = this.htmlValidator.stripParenthesisFromProperty(controllerPropertyString);
 
-                let secondNode: ts.Identifier | undefined;
-                if (controllerPropertyString && this.controllerNode) {
-                    this.controllerNode.forEachChild((node: ts.Node) => {
-                        if ((node as any).name && (node as any).name.escapedText && controllerPropertyString === (node as any).name.escapedText) {
-                            secondNode = node as ts.Identifier;
+                let secondNode: ts.Declaration | undefined;
+                if (controllerPropertyString && this.controllerNode && this.fileParser.checker) {
+                    const properties: ts.Symbol[] = this.getTypeProperties(this.controllerNode);
+                    for (const property of properties) {
+                        if (property.name && controllerPropertyString === property.name) {
+                            secondNode = property.valueDeclaration;
                         }
-                    });
+                    }
                 }
                 if (secondNode) {
                     interpolationProperties = this.createPropertiesArray(interpolationProperties);
-                    if (ts.isPropertyDeclaration(secondNode) || ts.isMethodDeclaration(secondNode)) {
-                        if (secondNode && secondNode.type) {
-                            if (ts.isTypeNode(secondNode.type)) {
-                                try {
-                                    this.setCompletionPropertiesOfLastNode(interpolationProperties, secondNode.type, items);
-                                } catch (error) {
-                                    console.log(error);
-                                }
+                    if (secondNode && (secondNode as any).type) {
+                        if (ts.isTypeNode((secondNode as any).type)) {
+                            try {
+                                this.setCompletionPropertiesOfLastNode(interpolationProperties, (secondNode as any).type, items);
+                            } catch (error) {
+                                console.log(error);
                             }
                         }
                     }
-
                 }
             }
         }
+    }
+
+    /**
+     * Get all the properties from type properties from a node
+     *
+     * @private
+     * @param {ts.Node} node
+     * @returns {ts.Symbol[]}
+     * @memberof AngularJSTemplateAutocomplete
+     */
+    private getTypeProperties(node: ts.Node): ts.Symbol[] {
+        if (this.fileParser.checker) {
+            const controllerType: ts.Type = this.fileParser.checker.getTypeAtLocation(node);
+            const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(controllerType);
+            return properties;
+        }
+        return [];
     }
 
     /**
@@ -159,24 +174,12 @@ export class AngularJSTemplateAutocomplete {
         const lastProperty: string | undefined = this.htmlValidator.stripParenthesisFromProperty(interpolationProperties.pop() as string);
         if (!lastProperty) {
             if (this.fileParser.checker) {
-                const type: ts.Type = this.fileParser.checker.getTypeFromTypeNode(typeNode);
-                const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(type);
-                for (const property of properties) {
-                    const item: vscode.CompletionItem = new vscode.CompletionItem(property.escapedName.toString());
-                    item.documentation = this.fileParser.serializeSymbol(property);
-                    if (property.flags === ts.SymbolFlags.Method) {
-                        item.kind = vscode.CompletionItemKind.Method;
-                        item.insertText = `${property.escapedName}()`;
-                    } else {
-                        item.kind = vscode.CompletionItemKind.Property;
-                    }
-                    items.push(item);
-                }
+                const properties: ts.Symbol[] = this.getTypeProperties(typeNode);
+                this.setCompletionProperties(properties, items);
             }
         } else {
             if (this.fileParser.checker) {
-                const type: ts.Type = this.fileParser.checker.getTypeFromTypeNode(typeNode);
-                const properties: ts.Symbol[] = this.fileParser.checker.getPropertiesOfType(type);
+                const properties: ts.Symbol[] = this.getTypeProperties(typeNode);
                 let propertyToFind: ts.Symbol | undefined;
                 for (const property of properties) {
                     if (property.escapedName.toString() === lastProperty) {
@@ -189,6 +192,29 @@ export class AngularJSTemplateAutocomplete {
     }
 
     /**
+     * Iterate over the properties for a type and set them as a completion item
+     *
+     * @private
+     * @param {ts.Symbol[]} properties
+     * @param {vscode.CompletionItem[]} items
+     * @memberof AngularJSTemplateAutocomplete
+     */
+    private setCompletionProperties(properties: ts.Symbol[], items: vscode.CompletionItem[]): void {
+        for (const property of properties) {
+            const item: vscode.CompletionItem = new vscode.CompletionItem(property.escapedName.toString());
+            item.documentation = this.fileParser.serializeSymbol(property);
+            if (property.flags === ts.SymbolFlags.Method) {
+                item.kind = vscode.CompletionItemKind.Method;
+                item.insertText = `${property.escapedName}()`;
+            }
+            else {
+                item.kind = vscode.CompletionItemKind.Property;
+            }
+            items.push(item);
+        }
+    }
+
+    /**
      * Set the second completions properties
      *
      * @private
@@ -196,45 +222,10 @@ export class AngularJSTemplateAutocomplete {
      * @memberof AngularJSTemplateAutocomplete
      */
     private setSecondLevelProperties(items: vscode.CompletionItem[]): void {
-        if (this.controllerNode) {
-            this.controllerNode.forEachChild((node: ts.Node) => {
-                if ((node as any).name && (node as any).name.escapedText) {
-                    if (ts.isPropertyDeclaration(node)) {
-                        const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
-                        item.kind = vscode.CompletionItemKind.Property;
-                        item.documentation = this.getDocumentationFromNode(node);
-                        items.push(item);
-                    }
-                    if (ts.isMethodDeclaration(node)) {
-                        const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
-                        item.kind = vscode.CompletionItemKind.Method;
-                        item.insertText = `${(node as any).name.escapedText}()`;
-                        item.documentation = this.getDocumentationFromNode(node);
-                        items.push(item);
-                    }
-                }
-            });
+        if (this.controllerNode && this.fileParser.checker) {
+            const properties: ts.Symbol[] = this.getTypeProperties(this.controllerNode);
+            this.setCompletionProperties(properties, items);
         }
     }
-
-    /**
-     * Get documentation for a method
-     *
-     * @private
-     * @param {ts.ClassElement} node
-     * @returns {string}
-     * @memberof AngularJSTemplateAutocomplete
-     */
-    private getDocumentationFromNode(node: ts.ClassElement): string {
-        let docs: string = '';
-        if (this.fileParser.checker && node.name) {
-            const symbol: ts.Symbol | undefined = this.fileParser.checker.getSymbolAtLocation(node.name);
-            if (symbol) {
-                docs = this.fileParser.serializeSymbol(symbol);
-            }
-        }
-        return docs;
-    }
-
 
 }
