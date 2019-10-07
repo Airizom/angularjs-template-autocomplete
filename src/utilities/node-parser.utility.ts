@@ -180,19 +180,39 @@ export class NodeParser {
         if (this.hasControllerAndTemplateProperties(controller, template, templateUrl)) {
             if (this.templatePropertyHasTemplateName(template, templateName, controller)) {
                 const controllerOptions: ControllerOptions = new ControllerOptions();
-                controllerOptions.controller = (controller as any).initializer.escapedText;
-                controllerOptions.controllerAs = controllerAs ? (controllerAs as any).initializer.text : '$ctrl';
-                controllerOptions.template = (template as any).getFullText(this.currentSourceFile);
+                controllerOptions.controller =
+                    (controller as ts.Identifier).escapedText ? (controller as ts.Identifier).escapedText : (controller as any).initializer.escapedText;
+                controllerOptions.controllerAs = this.getControllerAsStringValue(controllerAs);
+                controllerOptions.templateUrl = (templateUrl as any).getFullText(this.currentSourceFile);
                 return controllerOptions;
             } else if (this.templatePropertyHasTemplateName(templateUrl, templateName, controller)) {
                 const controllerOptions: ControllerOptions = new ControllerOptions();
-                controllerOptions.controller = (controller as any).initializer.escapedText;
-                controllerOptions.controllerAs = (controllerAs as any).initializer && (controllerAs as any).initializer.text ? (controllerAs as any).initializer.text : '$ctrl';
+                controllerOptions.controller =
+                    (controller as ts.Identifier).escapedText ? (controller as ts.Identifier).escapedText : (controller as any).initializer.escapedText;
+                controllerOptions.controllerAs = this.getControllerAsStringValue(controllerAs);
                 controllerOptions.templateUrl = (templateUrl as any).getFullText(this.currentSourceFile);
                 return controllerOptions;
             }
         }
         return new ControllerOptions();
+    }
+
+    /**
+     * Parse controllerAs property
+     *
+     * @private
+     * @param {(ts.Identifier | ts.NamedDeclaration)} controllerAs
+     * @returns {string}
+     * @memberof NodeParser
+     */
+    private getControllerAsStringValue(controllerAs: ts.Identifier | ts.NamedDeclaration | undefined): string {
+        if ((controllerAs as ts.Identifier).text) {
+            return (controllerAs as ts.Identifier).text;
+        }
+        if ((controllerAs as any).initializer && (controllerAs as any).initializer.text) {
+            return (controllerAs as any).initializer.text;
+        }
+        return '$ctrl';
     }
 
     /**
@@ -205,10 +225,13 @@ export class NodeParser {
      * @returns {boolean}
      * @memberof NodeParser
      */
-    private templatePropertyHasTemplateName(template: ts.NamedDeclaration | undefined, templateName: string, controller: ts.NamedDeclaration | undefined): boolean {
-        if (template && (template as any).initializer) {
-            const templateTextValue: string = (template as any).getFullText(this.currentSourceFile);
-            if (controller && controller.name && templateTextValue.includes(templateName)) {
+    private templatePropertyHasTemplateName(template: ts.NamedDeclaration | undefined, templateName: string, controller: ts.NamedDeclaration | ts.Identifier | undefined): boolean {
+        if (template && ((template as any).initializer || (template as any).text)) {
+            const templateTextValue: string = (template as any).text ? (template as any).text : (template as any).getFullText(this.currentSourceFile);
+            if (controller && ((controller as ts.NamedDeclaration).name || (controller as ts.Identifier).escapedText) && templateTextValue.includes(templateName)) {
+                if ((controller as ts.Identifier).escapedText) {
+                    return true;
+                }
                 if ((controller as any).initializer.kind === ts.SyntaxKind.ArrayLiteralExpression) {
                     const arrayOfControllers: [] = (controller as any).initializer.elements;
                     const lastController: any = arrayOfControllers[arrayOfControllers.length - 1];
@@ -255,11 +278,7 @@ export class NodeParser {
      * @memberof NodeParser
      */
     private getTemplatePropertyFromClassElement(members: ts.NodeArray<ts.NamedDeclaration>, escapedText: string): ts.NamedDeclaration | undefined {
-        return members.find((value: ts.NamedDeclaration) => {
-            if (value.name) {
-                return (value.name as any).escapedText === escapedText;
-            }
-        });
+        return this.parseNodesForProperty(escapedText, members);
     }
 
     /**
@@ -271,11 +290,40 @@ export class NodeParser {
      * @memberof NodeParser
      */
     private getControllerPropertyFromClassElement(members: ts.NodeArray<ts.NamedDeclaration>): ts.NamedDeclaration | undefined {
-        return members.find((value: ts.NamedDeclaration) => {
-            if (value.name) {
-                return (value.name as any).escapedText === 'controller';
+        const propertyName: string = 'controller';
+
+        return this.parseNodesForProperty(propertyName, members);
+    }
+
+    /**
+     * Parse nodes for property
+     *
+     * @private
+     * @param {string} propertyName
+     * @param {ts.NodeArray<ts.NamedDeclaration>} members
+     * @returns {(ts.NamedDeclaration | undefined)}
+     * @memberof NodeParser
+     */
+    private parseNodesForProperty(propertyName: string, members: ts.NodeArray<ts.NamedDeclaration>): ts.NamedDeclaration | undefined {
+        let nodeToReturn: ts.NamedDeclaration | undefined;
+
+        for (const value of members) {
+            if ((value as any).body && (value as any).kind === ts.SyntaxKind.Constructor && (value as any).body.statements) {
+                const statements: ts.Statement[] = (value as any).body.statements;
+                for (const statement of statements) {
+                    if ((statement as any).expression && (statement as any).expression.left) {
+                        if ((statement as any).expression.left.name.escapedText === propertyName && (statement as any).expression.right) {
+                            nodeToReturn = (statement as any).expression.right;
+                            break;
+                        }
+                    }
+                }
             }
-        });
+            if (value.name && (value.name as any).escapedText === propertyName) {
+                nodeToReturn = value;
+            }
+        }
+        return nodeToReturn;
     }
 
     /**
@@ -287,11 +335,9 @@ export class NodeParser {
      * @memberof NodeParser
      */
     private getControllerAsPropertyFromClassElement(members: ts.NodeArray<ts.NamedDeclaration>): ts.NamedDeclaration | undefined {
-        return members.find((value: ts.NamedDeclaration) => {
-            if (value.name) {
-                return (value.name as any).escapedText === 'controllerAs';
-            }
-        });
+        const propertyName: string = 'controllerAs';
+
+        return this.parseNodesForProperty(propertyName, members);
     }
 
 }

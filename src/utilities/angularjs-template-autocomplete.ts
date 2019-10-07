@@ -206,8 +206,7 @@ export class AngularJSTemplateAutocomplete {
             if (property.flags === ts.SymbolFlags.Method) {
                 item.kind = vscode.CompletionItemKind.Method;
                 item.insertText = `${property.escapedName}()`;
-            }
-            else {
+            } else {
                 item.kind = vscode.CompletionItemKind.Property;
             }
             items.push(item);
