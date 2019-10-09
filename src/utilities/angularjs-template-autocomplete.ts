@@ -195,25 +195,17 @@ export class AngularJSTemplateAutocomplete {
      * @param {vscode.CompletionItem[]} items
      * @memberof AngularJSTemplateAutocomplete
      */
-    private setSecondLevelProperties(items: vscode.CompletionItem[]): void {
-        if (this.controllerNode) {
-            this.controllerNode.forEachChild((node: ts.Node) => {
-                if ((node as any).name && (node as any).name.escapedText) {
-                    if (ts.isPropertyDeclaration(node)) {
-                        const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
-                        item.kind = vscode.CompletionItemKind.Property;
-                        item.documentation = this.getDocumentationFromNode(node);
-                        items.push(item);
-                    }
-                    if (ts.isMethodDeclaration(node)) {
-                        const item: vscode.CompletionItem = new vscode.CompletionItem((node as any).name.escapedText);
-                        item.kind = vscode.CompletionItemKind.Method;
-                        item.insertText = `${(node as any).name.escapedText}()`;
-                        item.documentation = this.getDocumentationFromNode(node);
-                        items.push(item);
-                    }
-                }
-            });
+    private setCompletionProperties(properties: ts.Symbol[], items: vscode.CompletionItem[]): void {
+        for (const property of properties) {
+            const item: vscode.CompletionItem = new vscode.CompletionItem(property.escapedName.toString());
+            item.documentation = this.fileParser.serializeSymbol(property);
+            if (property.flags === ts.SymbolFlags.Method) {
+                item.kind = vscode.CompletionItemKind.Method;
+                item.insertText = `${property.escapedName}()`;
+            } else {
+                item.kind = vscode.CompletionItemKind.Property;
+            }
+            items.push(item);
         }
     }
 
