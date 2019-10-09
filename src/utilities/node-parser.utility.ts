@@ -183,7 +183,7 @@ export class NodeParser {
                 controllerOptions.controller =
                     (controller as ts.Identifier).escapedText ? (controller as ts.Identifier).escapedText : (controller as any).initializer.escapedText;
                 controllerOptions.controllerAs = this.getControllerAsStringValue(controllerAs);
-                controllerOptions.templateUrl = (templateUrl as any).getFullText(this.currentSourceFile);
+                controllerOptions.template = (template as any).getFullText(this.currentSourceFile);
                 return controllerOptions;
             } else if (this.templatePropertyHasTemplateName(templateUrl, templateName, controller)) {
                 const controllerOptions: ControllerOptions = new ControllerOptions();
@@ -226,8 +226,8 @@ export class NodeParser {
      * @memberof NodeParser
      */
     private templatePropertyHasTemplateName(template: ts.NamedDeclaration | undefined, templateName: string, controller: ts.NamedDeclaration | ts.Identifier | undefined): boolean {
-        if (template && ((template as any).initializer || (template as any).text)) {
-            const templateTextValue: string = (template as any).text ? (template as any).text : (template as any).getFullText(this.currentSourceFile);
+        const templateTextValue: string = template ? (template as any).getFullText(this.currentSourceFile) : '';
+        if (template && ((template as any).initializer || templateTextValue)) {
             if (controller && ((controller as ts.NamedDeclaration).name || (controller as ts.Identifier).escapedText) && templateTextValue.includes(templateName)) {
                 if ((controller as ts.Identifier).escapedText) {
                     return true;
