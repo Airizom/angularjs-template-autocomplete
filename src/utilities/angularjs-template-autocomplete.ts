@@ -20,7 +20,7 @@ export class AngularJSTemplateAutocomplete {
      * @memberof AngularJSTemplateAutocomplete
      */
     public get isAutocompleteAvailable(): boolean {
-        return this.controllerNode ? true : false;
+        return !!this.controllerNode;
     }
 
 
