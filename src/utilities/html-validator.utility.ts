@@ -51,7 +51,7 @@ export class HtmlValidator {
      * @type {string}
      * @memberof HtmlValidator
      */
-    private interpolatinoEndText: string = '';
+    private interpolationEndText: string = '';
 
     constructor(public document: vscode.TextDocument, public position: vscode.Position) {
         this.beforeText = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
@@ -78,7 +78,7 @@ export class HtmlValidator {
     public getInterpolationText(): string {
         const lastIndexOfStringInterpolationStartText: number = this.beforeText.lastIndexOf(this.interpolationStartText);
         const interpolationTextBeginning: string = this.beforeText.substring(lastIndexOfStringInterpolationStartText, this.beforeText.length);
-        const firstIndexOfInterpolationEndText: number = this.afterText.indexOf(this.interpolatinoEndText);
+        const firstIndexOfInterpolationEndText: number = this.afterText.indexOf(this.interpolationEndText);
         const interpolatinoTextEnd: string = this.afterText.substring(0, firstIndexOfInterpolationEndText);
         if (this.isInsideParenthesis(interpolationTextBeginning, interpolatinoTextEnd)) {
             return this.getTextInsideParenthesis(interpolationTextBeginning.substring(2), interpolatinoTextEnd);
@@ -97,17 +97,31 @@ export class HtmlValidator {
      * Get the text that is enclosed in parenthesis
      *
      * @param {string} interpolationTextBeginning
-     * @param {string} interpolatinoTextEnd
+     * @param {string} interpolationTextEnd
      * @returns {string}
      * @memberof HtmlValidator
      */
-    getTextInsideParenthesis(interpolationTextBeginning: string, interpolatinoTextEnd: string): string {
+    public getTextInsideParenthesis(interpolationTextBeginning: string, interpolationTextEnd: string): string {
         const lastIndexOfOpenParenthesis: number = interpolationTextBeginning.lastIndexOf('(');
         const interpolationStartText: string = interpolationTextBeginning.substring(lastIndexOfOpenParenthesis + 1);
-        const firstIndexOfInterpolationEndText: number = interpolatinoTextEnd.indexOf(')');
-        const interpolatinoEndText: string = interpolationTextBeginning.substring(0, firstIndexOfInterpolationEndText);
-        const interpolationText: string = `${interpolationStartText}${interpolatinoEndText}`.replace(' ', '');
+        const firstIndexOfInterpolationEndText: number = interpolationTextEnd.indexOf(')');
+        const interpolationEndText: string = interpolationTextBeginning.substring(0, firstIndexOfInterpolationEndText);
+        const interpolationText: string = `${interpolationStartText}${interpolationEndText}`.replace(' ', '');
         return interpolationText;
+    }
+
+    /**
+     * Remove the parenthesis and everything inside it from a method.
+     *
+     * @param {string} property
+     * @returns {string}
+     * @memberof HtmlValidator
+     */
+    public stripParenthesisFromProperty(property: string): string {
+        if (property) {
+            return property.replace(/\(.*\)/g, '');
+        }
+        return '';
     }
 
     /**
@@ -160,20 +174,6 @@ export class HtmlValidator {
         }
         return false;
 
-    }
-
-    /**
-     * Remove the parenthesis and everything inside it from a method.
-     *
-     * @param {string} property
-     * @returns {string}
-     * @memberof HtmlValidator
-     */
-    public stripParenthesisFromProperty(property: string): string {
-        if (property) {
-            return property.replace(/\(.*\)/g, '');
-        }
-        return '';
     }
 
     /**
@@ -236,7 +236,7 @@ export class HtmlValidator {
             const character: string = this.afterText.charAt(i);
             if (character === beforeTextCharacter) {
                 this.interpolationStartText = `=${beforeTextCharacter}`;
-                this.interpolatinoEndText = beforeTextCharacter;
+                this.interpolationEndText = beforeTextCharacter;
                 return true;
             }
         }
@@ -276,7 +276,7 @@ export class HtmlValidator {
                     const previousCharacter: string = this.afterText.charAt(i + 1);
                     if (previousCharacter === '}') {
                         this.interpolationStartText = '{{';
-                        this.interpolatinoEndText = '}}';
+                        this.interpolationEndText = '}}';
                         return true;
                     }
                     return false;

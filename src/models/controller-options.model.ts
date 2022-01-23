@@ -34,10 +34,6 @@ export class ControllerOptions {
      */
     public controllerAs: string = '$ctrl';
 
-    constructor() {
-        //
-    }
-
     /**
      * Return true if the controller property has been set along with a template.
      *
@@ -73,7 +69,7 @@ export class ControllerOptions {
     }
 
     /**
-     * Validate if the controller options are set and the template name mathces the file name
+     * Validate if the controller options are set and the template name matches the file name
      *
      * @param {string} fileName
      * @returns {boolean}
@@ -85,7 +81,4 @@ export class ControllerOptions {
         }
         return false;
     }
-
-
-
 }

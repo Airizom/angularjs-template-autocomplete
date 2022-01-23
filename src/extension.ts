@@ -1,16 +1,24 @@
+import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import { AngularJSTemplateAutocomplete } from './utilities/angularjs-template-autocomplete';
+import { FileParser } from './utilities/file-parser.utility';
 
 /**
  * this method is called when your extension is activated
  * your extension is activated the very first time the command is executed
  *
  * @export
- * @param {vscode.ExtensionContext} context
+ * @param {vscode.ExtensionContext} extensionContext
  * @returns
  */
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(extensionContext: vscode.ExtensionContext): Promise<void> {
+    // Iterate over all workspace folders exclude node_modules
+    const files: vscode.Uri[] = await vscode.workspace.findFiles('**/*.{ts,js}', '**/node_modules/**');
 
+    // Convert to list of file paths
+    const filePaths: string[] = files.map(file => file.fsPath);
+    // Cache off the program
+    FileParser.program = ts.createProgram(filePaths, FileParser.parsedConfig ? FileParser.parsedConfig.options : {});
     const provider: vscode.Disposable = vscode.languages.registerCompletionItemProvider({ language: 'html', scheme: 'file' }, {
         provideCompletionItems(
             document: vscode.TextDocument,
@@ -28,8 +36,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     }, '.');
 
-    context.subscriptions.push(provider);
-
+    extensionContext.subscriptions.push(provider);
 }
 
 /**

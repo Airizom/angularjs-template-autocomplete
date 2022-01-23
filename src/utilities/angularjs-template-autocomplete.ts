@@ -1,7 +1,7 @@
-import { FileParser } from './file-parser.utility';
-import * as vscode from 'vscode';
 import * as ts from 'typescript';
+import * as vscode from 'vscode';
 import { ControllerOptions } from '../models/controller-options.model';
+import { FileParser } from './file-parser.utility';
 import { HtmlValidator } from './html-validator.utility';
 
 /**
@@ -13,7 +13,7 @@ import { HtmlValidator } from './html-validator.utility';
 export class AngularJSTemplateAutocomplete {
 
     /**
-     * Determine if auto complete is availabe in the template file
+     * Determine if auto complete is available in the template file
      *
      * @readonly
      * @type {boolean}
@@ -106,7 +106,7 @@ export class AngularJSTemplateAutocomplete {
                             try {
                                 this.setCompletionPropertiesOfLastNode(interpolationProperties, (secondNode as any).type, items);
                             } catch (error) {
-                                console.log(error);
+                                console.error(error);
                             }
                         }
                     }
@@ -133,7 +133,7 @@ export class AngularJSTemplateAutocomplete {
     }
 
     /**
-     * Activate the class by creatingn controller options by using the html template name.
+     * Activate the class by creating controller options by using the html template name.
      * Then using those options to get the node of the controller.
      *
      * @private
@@ -147,7 +147,7 @@ export class AngularJSTemplateAutocomplete {
     }
 
     /**
-     * Reverse the interpolation properties and then remove the uneeded controller and second level property.
+     * Reverse the interpolation properties and then remove the unneeded controller and second level property.
      *
      * @private
      * @param {string[]} interpolationProperties
@@ -184,6 +184,9 @@ export class AngularJSTemplateAutocomplete {
                 for (const property of properties) {
                     if (property.escapedName.toString() === lastProperty) {
                         propertyToFind = property;
+                        if (!propertyToFind) {
+                            return;
+                        }
                         this.setCompletionPropertiesOfLastNode(interpolationProperties, (propertyToFind.valueDeclaration as any).type, items);
                     }
                 }

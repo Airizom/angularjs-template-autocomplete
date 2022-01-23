@@ -1,10 +1,10 @@
 import * as fs from 'fs';
-import * as vscode from 'vscode';
+import * as os from 'os';
 import * as path from 'path';
 import * as ts from 'typescript';
-import { NodeParser } from './node-parser.utility';
+import * as vscode from 'vscode';
 import { ControllerOptions } from '../models/controller-options.model';
-import * as os from 'os';
+import { NodeParser } from './node-parser.utility';
 
 /**
  * File Parser
@@ -15,13 +15,21 @@ import * as os from 'os';
 export class FileParser {
 
     /**
-     * Config for the tyepscript program
+     * Config for the TypeScript program
      *
      * @static
      * @type {(ts.ParsedCommandLine | undefined)}
      * @memberof FileParser
      */
     public static parsedConfig: ts.ParsedCommandLine | undefined;
+
+    /**
+     * Typescript program created so that we can parse all nodes for types
+     *
+     * @type {(ts.Program | undefined)}
+     * @memberof FileParser
+     */
+    public static program: ts.Program | undefined;
 
 
     /**
@@ -47,14 +55,6 @@ export class FileParser {
      * @memberof FileParser
      */
     public currentSourceFile: ts.SourceFile | undefined;
-
-    /**
-     * Tyepscript program created so that we can parse all nodes for types
-     *
-     * @type {(ts.Program | undefined)}
-     * @memberof FileParser
-     */
-    public program: ts.Program | undefined;
 
     /**
      * Checker used to check various types, properties and documentation
@@ -98,11 +98,17 @@ export class FileParser {
 
         if (controllerFilePath) {
             this.setParsedConfig();
-            this.program = ts.createProgram([controllerFilePath], FileParser.parsedConfig ? FileParser.parsedConfig.options : {});
-            this.checker = this.program.getTypeChecker();
+            if (!FileParser.program) {
+                return undefined;
+            }
+            this.checker = FileParser.program.getTypeChecker();
 
-            const sourceFiles: readonly ts.SourceFile[] = this.program.getSourceFiles();
-            return this.getControllerOptionsInSourceFiles(sourceFiles, templateFilePath);
+            const sourceFiles: readonly ts.SourceFile[] = FileParser.program.getSourceFiles();
+            // Filter down the source files to list of source files that have the controller file path
+            const filteredSourceFiles: ts.SourceFile[] = sourceFiles.filter((value: ts.SourceFile) => {
+                return value.fileName.includes(controllerFilePath);
+            });
+            return this.getControllerOptionsInSourceFiles(filteredSourceFiles, templateFilePath);
         }
     }
 
@@ -115,8 +121,8 @@ export class FileParser {
      * @memberof FileParser
      */
     public getTemplateControllerNode(controllerName: string): ts.Node | undefined {
-        if (this.program) {
-            for (const sourceFile of this.program.getSourceFiles()) {
+        if (FileParser.program) {
+            for (const sourceFile of FileParser.program.getSourceFiles()) {
                 const node: ts.Node = this.getFirstChildrenFromFile(sourceFile);
                 if (node) {
                     const nodeChildren: ts.Node[] = node.getChildren(sourceFile);
@@ -136,19 +142,22 @@ export class FileParser {
     }
 
     /**
-     * Serialize a symbol to be used as documenation string.
+     * Serialize a symbol to be used as documentation string.
      *
      * @param {ts.Symbol} symbol
      * @returns {string}
      * @memberof FileParser
      */
     public serializeSymbol(symbol: ts.Symbol): string {
+        if (!symbol) {
+            return '';
+        }
         if (this.checker) {
-            const typeOfDeclaration: string = ts.isMethodDeclaration(symbol.valueDeclaration) || ts.isMethodSignature(symbol.valueDeclaration) ? 'method' : 'property';
+            const typeOfDeclaration: string = ts.isMethodDeclaration(symbol.valueDeclaration as ts.Declaration) || ts.isMethodSignature(symbol.valueDeclaration as ts.Declaration) ? 'method' : 'property';
 
             return `(${typeOfDeclaration}) ${symbol.getName()}${os.EOL}` +
                 ts.displayPartsToString(symbol.getDocumentationComment(this.checker)) + os.EOL +
-                this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration));
+                this.checker.typeToString(this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration as ts.Declaration));
         }
         return '';
     }
