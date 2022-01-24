@@ -106,7 +106,7 @@ export class FileParser {
             const sourceFiles: readonly ts.SourceFile[] = FileParser.program.getSourceFiles();
             // Filter down the source files to list of source files that have the controller file path
             const filteredSourceFiles: ts.SourceFile[] = sourceFiles.filter((value: ts.SourceFile) => {
-                return value.fileName.includes(controllerFilePath);
+                return path.normalize(value.fileName).includes(controllerFilePath);
             });
             return this.getControllerOptionsInSourceFiles(filteredSourceFiles, templateFilePath);
         }
@@ -183,7 +183,7 @@ export class FileParser {
                             controllerOptions = this.nodeParser.getTemplateControllerOptions(nodeChild, templateFilePath);
                             const templateName: string = path.basename(templateFilePath);
                             if (controllerOptions && controllerOptions.isValidController(templateName)) {
-                                return file;
+                                return path.normalize(file);
                             }
                         }
                     }
