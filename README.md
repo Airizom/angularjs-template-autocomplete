@@ -1,5 +1,9 @@
 [![The MIT License](https://img.shields.io/badge/license-MIT-orange.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 
+![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/michaelisom.angularjs-template-autocomplete.svg?style=flat-square)
+
+![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/michaelisom.angularjs-template-autocomplete.svg?style=flat-square)
+
 # AngularJS Template Autocomplete for Visual Studio Code
 
 This extension will allow the user to autocomplete AngularJS controller properties and methods inside an HTML template.
