@@ -2,7 +2,7 @@
 	"name": "angularjs-template-autocomplete",
 	"displayName": "AngularJS Template Autocomplete",
 	"description": "Autocomplete AngularJS controller properties and methods from an html template",
-	"version": "1.0.12",
+	"version": "1.0.13",
 	"icon": "angularjs-128.png",
 	"publisher": "michaelisom",
 	"repository": {
