@@ -65,7 +65,7 @@ export class FileParser {
     public checker: ts.TypeChecker | undefined;
 
     /**
-     * Directoy files name that are present in the template directory
+     * Directory files name that are present in the template directory
      *
      * @private
      * @type {string[]}
@@ -153,7 +153,8 @@ export class FileParser {
             return '';
         }
         if (this.checker) {
-            const typeOfDeclaration: string = ts.isMethodDeclaration(symbol.valueDeclaration as ts.Declaration) || ts.isMethodSignature(symbol.valueDeclaration as ts.Declaration) ? 'method' : 'property';
+            const typeOfDeclaration: string =
+                ts.isMethodDeclaration(symbol.valueDeclaration as ts.Declaration) || ts.isMethodSignature(symbol.valueDeclaration as ts.Declaration) ? 'method' : 'property';
 
             return `(${typeOfDeclaration}) ${symbol.getName()}${os.EOL}` +
                 ts.displayPartsToString(symbol.getDocumentationComment(this.checker)) + os.EOL +
@@ -182,7 +183,7 @@ export class FileParser {
                         if (this.nodeParser) {
                             controllerOptions = this.nodeParser.getTemplateControllerOptions(nodeChild, templateFilePath);
                             const templateName: string = path.basename(templateFilePath);
-                            if (controllerOptions && controllerOptions.isValidController(templateName)) {
+                            if (controllerOptions?.isValidController(templateName)) {
                                 return path.normalize(file);
                             }
                         }
@@ -235,7 +236,7 @@ export class FileParser {
                         if (this.nodeParser) {
                             const controllerOptions: ControllerOptions = this.nodeParser.getTemplateControllerOptions(child, templateFilePath);
                             const templateName: string = path.basename(templateFilePath);
-                            if (controllerOptions && controllerOptions.isValidController(templateName)) {
+                            if (controllerOptions?.isValidController(templateName)) {
                                 return controllerOptions;
                             }
                         }

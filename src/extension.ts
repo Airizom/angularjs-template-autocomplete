@@ -19,6 +19,12 @@ export async function activate(extensionContext: vscode.ExtensionContext): Promi
     const filePaths: string[] = files.map(file => file.fsPath);
     // Cache off the program
     FileParser.program = ts.createProgram(filePaths, FileParser.parsedConfig ? FileParser.parsedConfig.options : {});
+    // When any files change, update the program
+    vscode.workspace.onDidChangeTextDocument(event => {
+        if (event.document.languageId === 'typescript' || event.document.languageId === 'javascript') {
+            FileParser.program = ts.createProgram(filePaths, FileParser.parsedConfig ? FileParser.parsedConfig.options : {});
+        }
+    });
     const provider: vscode.Disposable = vscode.languages.registerCompletionItemProvider({ language: 'html', scheme: 'file' }, {
         provideCompletionItems(
             document: vscode.TextDocument,
